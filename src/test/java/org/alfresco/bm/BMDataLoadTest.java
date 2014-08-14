@@ -30,16 +30,13 @@ import org.junit.runners.JUnit4;
  * @author Michael Suzuki
  * @since 2.0
  */
+@RunWith(JUnit4.class)
 public class BMDataLoadTest
 {
-   @RunWith(JUnit4.class)
-   public class BMPublicApiTest
-   {
-       @Test
-       public void testPublicApi() throws Exception
-       {
-           BMTestRunner testRunner = new BMTestRunner(60000L);
-           testRunner.run(null, null, null);
-       }
-   }
+    @Test
+    public void testPublicApi() throws Exception
+    {
+        BMTestRunner testRunner = new BMTestRunner(60000L);
+        testRunner.run(null, null, null);
+    }
 }
