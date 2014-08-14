@@ -2,6 +2,7 @@ package org.alfresco.bm.dataload;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
@@ -12,8 +13,8 @@ import org.alfresco.bm.site.SiteDataServiceImpl.UserSitesCount;
 import org.alfresco.bm.site.SiteMember;
 import org.alfresco.bm.site.SiteRole;
 import org.alfresco.bm.user.UserData;
+import org.alfresco.bm.user.UserData.UserCreationState;
 import org.alfresco.bm.user.UserDataService;
-import org.springframework.data.mongodb.core.mapreduce.GroupByResults;
 
 /**
  * Prepares the site members collection such that, for a given set containing userRatio (in percent) of created users, each user in that set is a member of at least minSitesPerUser sites.
@@ -61,8 +62,8 @@ public class PrepareRatioUserSiteMemberships extends AbstractEventProcessor
     {
         int membersCount = 0;
 
-        GroupByResults<UserSitesCount> results = siteDataService.userSitesCounts();
-        long userCount = userDataService.countUsers(true);
+        List<UserSitesCount> results = siteDataService.userSitesCounts();
+        long userCount = userDataService.countUsers(null, UserCreationState.Created);
         long numUsers = (long)(userRatio/100.0 * userCount);
 
         long counter = 0;

@@ -10,6 +10,7 @@ import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMember;
 import org.alfresco.bm.user.UserData;
+import org.alfresco.bm.user.UserData.UserCreationState;
 import org.alfresco.bm.user.UserDataService;
 
 /**
@@ -33,7 +34,7 @@ public class PrepareRMRoles extends AbstractEventProcessor
     private String eventNamePrepareRMRoles;
     private UserDataService userDataService;
     private SiteDataService siteDataService;
-
+    private int count;
 
     /**
      * @param services              data collections
@@ -68,8 +69,7 @@ public class PrepareRMRoles extends AbstractEventProcessor
             nextEvents.add(doneEvent);
         }
         //Find all users that are not in rm
-        int totalUsers = (int) userDataService.countUsers(true);
-        List<UserData> users = userDataService.getCreatedUsers(0, totalUsers);
+        List<UserData> users = userDataService.getUsersByCreationState(UserCreationState.Created, 0, count);
         if(users.size() == 0)
         {
             // There is nothing more to do
@@ -109,4 +109,15 @@ public class PrepareRMRoles extends AbstractEventProcessor
         }
         return result;
     }
+
+    public int getCount()
+    {
+        return count;
+    }
+
+    public void setCount(int count)
+    {
+        this.count = count;
+    }
+    
 }

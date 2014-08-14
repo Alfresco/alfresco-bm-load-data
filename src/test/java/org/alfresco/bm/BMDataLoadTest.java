@@ -18,43 +18,28 @@
  */
 package org.alfresco.bm;
 
-import java.io.IOException;
-import java.util.Properties;
-
 import org.alfresco.bm.tools.BMTestRunner;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  * Initiates the application context associated with this test.
  * 
  * @author Derek Hulley
- * @since 1.0
+ * @author Michael Suzuki
+ * @since 2.0
  */
 public class BMDataLoadTest
 {
-    public static void main(String ... args) throws IOException
-    {
-        // Test properties
-        Properties testProperties = new Properties();
-        testProperties.load(BMDataLoadTest.class.getResourceAsStream("/default.properties"));
-        
-        String testNameOriginal = "bm-dataload";
-        String testName = testNameOriginal.replace("-", "_");
-        
-        BMTestRunner testRunner = new BMTestRunner(
-                testNameOriginal + "-context.xml",
-                2,
-                "mongodb://127.0.0.1:27017/test",
-                testName, "run_" + System.currentTimeMillis(),
-                testProperties);
-        
-        testRunner.start();
-        System.out.println("Hit any key to end run.");
-        try
-        {
-            System.in.read();
-        }
-        catch (Throwable e) {}
-        
-        testRunner.stop();
-    }
+   @RunWith(JUnit4.class)
+   public class BMPublicApiTest
+   {
+       @Test
+       public void testPublicApi() throws Exception
+       {
+           BMTestRunner testRunner = new BMTestRunner(60000L);
+           testRunner.run(null, null, null);
+       }
+   }
 }

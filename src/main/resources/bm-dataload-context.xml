@@ -224,6 +224,7 @@
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <property name="chart" value="false"/>
+        <property name="count" value="${prepare.rm.role.max.user.count}"/>
     </bean>
     
     <bean id="event.rmRolesPrepared" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >

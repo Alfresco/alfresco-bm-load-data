@@ -80,7 +80,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
             String networkId = networksIt.next();
 
             // users from network
-            Iterator<UserData> users = userDataService.getUsersByDomainIterator(networkId);
+            Iterator<UserData> users = userDataService.getUsersInDomain(networkId, 0, 200).iterator();
 
             // iterate through sites that exist in the given network on the Alfresco server
             Iterator<SiteData> sitesIt = siteDataService.sitesIterator(networkId, true);

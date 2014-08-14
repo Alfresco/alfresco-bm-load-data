@@ -80,7 +80,7 @@ public class PrepareSites extends AbstractEventProcessor
             long numSitesInNetwork = siteDataService.countSites(networkId);
             if(numSitesInNetwork < maxSitesPerNetwork)
             {
-                List<UserData> usersInNetwork = userDataService.getUsersInDomain(networkId, 0, maxSitesPerNetwork, true);
+                List<UserData> usersInNetwork = userDataService.getUsersInDomain(networkId, 0, 200);
                 if(usersInNetwork.size() > 0)
                 {
                     // there are users in the network, which means that the network exists. Proceed.

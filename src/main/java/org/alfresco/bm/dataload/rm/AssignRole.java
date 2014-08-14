@@ -87,7 +87,7 @@ public class AssignRole extends AuthenticatedHttpEventProcessor
             }
         }
         
-        siteDataService.markSiteMemberCreated(data.getSiteId(), data.getUsername(), data.getRole(), true);
+        siteDataService.setSiteMemberCreated(data.getSiteId(), data.getUsername(), role, true);
         return new EventResult(String.format("RM role %s assigned to user %s", role, data.getUsername()), true);
     }
 }

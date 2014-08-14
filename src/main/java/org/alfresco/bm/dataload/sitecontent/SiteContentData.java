@@ -46,6 +46,17 @@ public class SiteContentData implements Serializable
         this.type = type;
         this.name = name;
     }
+    public SiteContentData(int randomizer, String creator, String networkId,
+            String parentPath, String siteId, String type, String name)
+    {
+        this.randomizer = randomizer;
+        this.creator = creator;
+        this.networkId = networkId;
+        this.parentPath = parentPath;
+        this.siteId = siteId;
+        this.type = type;
+        this.name = name;
+    }
 
     public int getRandomizer()
     {
