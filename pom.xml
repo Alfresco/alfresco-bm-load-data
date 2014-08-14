@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.alfresco</groupId>
+    <artifactId>alfresco-benchmark-bm-dataload</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <parent>
+        <groupId>org.alfresco</groupId>
+        <artifactId>alfresco-benchmark-common</artifactId>
+        <version>1.6</version>
+    </parent>
+    <dependencies>
+        <dependency>
+            <groupId>org.alfresco</groupId>
+            <artifactId>alfresco-benchmark-server</artifactId>
+            <version>1.4.2-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.alfresco</groupId>
+            <artifactId>alfresco-benchmark-bm-publicapi</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+    <scm>
+        <connection>scm:svn:http://svn.alfresco.com/repos/alfresco-open-mirror/benchmark/tests/bm-publicapi/HEAD</connection>
+        <developerConnection>scm:svn:https://svn.alfresco.com/repos/alfresco-enterprise/benchmark/tests/bm-publicapi/HEAD</developerConnection>
+    </scm>
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <configuration>
+                    <tagNameFormat>V@{project.version}</tagNameFormat>
+                    <tagBase>https://svn.alfresco.com/repos/alfresco-enterprise/benchmark/tests/bm-dataload/tags</tagBase>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
