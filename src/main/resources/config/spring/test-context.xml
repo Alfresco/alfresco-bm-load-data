@@ -14,8 +14,7 @@
      -->
          
     <!-- Import any application contexts for test runs -->
-    <import resource="classpath:testrun-common-context.xml" />
-
+    <import resource="classpath:config/spring/test-common-context.xml" />
     <bean id="userDataService" class="org.alfresco.bm.user.UserDataServiceImpl">
         <constructor-arg name="mongo" ref="mongoTemplate" />
         <constructor-arg name="collectionName" value="${users.collectionName}" />
