@@ -15,16 +15,16 @@
          
     <!-- Import any application contexts for test runs -->
     <import resource="classpath:config/spring/test-common-context.xml" />
+    <import resource="classpath:config/spring/test-http-context.xml" />
     <bean id="userDataService" class="org.alfresco.bm.user.UserDataServiceImpl">
-        <constructor-arg name="mongo" ref="mongoTemplate" />
-        <constructor-arg name="collectionName" value="${users.collectionName}" />
+        <constructor-arg name="db" ref="testMongoDB" />
+        <constructor-arg name="collection" value="${users.collection.name}" />
     </bean>
 
     <bean id="siteDataService" class="org.alfresco.bm.site.SiteDataServiceImpl">
-        <constructor-arg name="mongo" ref="mongoTemplate" />
-        <constructor-arg name="sitesCollectionName" value="${sites.collectionName}" />
-        
-        <constructor-arg name="siteMembersCollectionName" value="${siteMembers.collectionName}" />
+        <constructor-arg name="db" ref="testMongoDB" />
+        <constructor-arg name="sites" value="${sites.collection.name}" />
+        <constructor-arg name="siteMembers" value="${site.members.collection.name}" />
     </bean>
 
     <bean id="preferredCMISEndPoint" class="org.springframework.social.alfresco.api.CMISEndpoint">
@@ -43,40 +43,40 @@
         <constructor-arg name="socketTtlMs" value="${http.socket.ttlMs}"/>
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="context" value="${alfresco.context}"/>
-        <constructor-arg name="publicApiServletName" value="${alfresco.publicApiServletName}"/>
-        <constructor-arg name="serviceServletName" value="${alfresco.serviceServletName}"/>
+        <constructor-arg name="publicApiServletName" value="${alfresco.public.api.servlet.name}"/>
+        <constructor-arg name="serviceServletName" value="${alfresco.service.servlet.name}"/>
     </bean>
 
     <bean id="oAuthPublicApiFactory" class="org.alfresco.bm.publicapi.factory.OAuthPublicApiFactory">
         <constructor-arg name="host" value="${alfresco.server}"/>
         <constructor-arg name="port" value="${alfresco.port}"/>
         <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="redirectUri" value="${oauth.redirectUri}"/>
-        <constructor-arg name="consumerKey" value="${oauth.consumerKey}"/>
-        <constructor-arg name="consumerSecret" value="${oauth.consumerSecret}"/>
+        <constructor-arg name="redirectUri" value="${oauth.redirect.uri}"/>
+        <constructor-arg name="consumerKey" value="${oauth.consumer.key}"/>
+        <constructor-arg name="consumerSecret" value="${oauth.consumer.secret}"/>
     </bean>
     
     <bean id="authenticationDetailsProvider" class="org.alfresco.bm.http.UserDataAutheticationDetailsProvider">
         <constructor-arg name="userDataService" ref="userDataService" />
-        <constructor-arg name="adminUserName" value="${alfresco.adminUser}" />
-        <constructor-arg name="adminPassword" value="${alfresco.adminPwd}" />
+        <constructor-arg name="adminUserName" value="${alfresco.admin.user}" />
+        <constructor-arg name="adminPassword" value="${alfresco.admin.pwd}" />
     </bean>
     
     <alias name="basicAuthPublicApiFactory" alias="publicApiFactory"/>
 
     <bean id="fileDataService" class="org.alfresco.bm.file.FileDataServiceImpl">
-        <constructor-arg name="mongo" ref="mongoTemplate" />
-        <constructor-arg name="collection" value="${files.collection}" />
+        <constructor-arg name="db" ref="testMongoDB" />
+        <constructor-arg name="collection" value="${files.collection.name}" />
     </bean>
 
     <bean id="testFileService" class="org.alfresco.bm.file.FtpTestFileService">
         <constructor-arg name="fileDataService" ref="fileDataService" />
-        <constructor-arg name="localDir" value="${dataload.files.localDir}" /> 
-        <constructor-arg name="ftpHost" value="${dataload.files.ftpHost}" /> 
-        <constructor-arg name="ftpPort" value="${dataload.files.ftpPort}" /> 
-        <constructor-arg name="ftpUsername" value="${dataload.files.ftpUsername}" /> 
-        <constructor-arg name="ftpPassword" value="${dataload.files.ftpPassword}" /> 
-        <constructor-arg name="ftpPath" value="${dataload.files.ftpPath}" /> 
+        <constructor-arg name="localDir" value="${files.local.dir}" /> 
+        <constructor-arg name="ftpHost" value="${files.ftp.host}" /> 
+        <constructor-arg name="ftpPort" value="${files.ftp.port}" /> 
+        <constructor-arg name="ftpUsername" value="${files.ftp.username}" /> 
+        <constructor-arg name="ftpPassword" value="${files.ftp.password}" /> 
+        <constructor-arg name="ftpPath" value="${files.ftp.path}" /> 
     </bean>
 
     <bean id="contentCreator" class="org.alfresco.bm.publicapi.data.DefaultContentCreator">
@@ -102,7 +102,7 @@
     <bean id="event.prepareSites" class="org.alfresco.bm.dataload.PrepareSites" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
-        <property name="maxSitesPerNetwork" value="${prepareSites.maxSitesPerNetwork}" />
+        <property name="maxSitesPerNetwork" value="${prepare.sites.max.sites.per.network}" />
         <property name="chart" value="false"/>
     </bean>
     
@@ -138,15 +138,15 @@
     <bean id="event.prepareSiteMembers" class="org.alfresco.bm.dataload.PrepareSiteMembers" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
-        <property name="maxSiteMembers" value="${prepareSiteMembers.maxSiteMembers}" />
+        <property name="maxSiteMembers" value="${prepare.site.members.max.site.members}" />
         <property name="chart" value="false"/>
     </bean>
 
     <bean id="event.prepareRatioUserSiteMemberships" class="org.alfresco.bm.dataload.PrepareRatioUserSiteMemberships" parent="event.base" >
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <constructor-arg name="userDataService" ref="userDataService" />
-        <constructor-arg name="userRatio" value="${prepareSiteMembers.userRatio}" />
-        <constructor-arg name="minSitesPerUser" value="${prepareSiteMembers.minSitesPerUser}"/>
+        <constructor-arg name="userRatio" value="${prepare.site.members.user.ratio}" />
+        <constructor-arg name="minSitesPerUser" value="${prepare.site.members.min.sites.per.user}"/>
     </bean>
 
     <bean id="event.siteMembersPrepared" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
@@ -180,8 +180,8 @@
     
     <bean id="event.prepareRMAdmin" class="org.alfresco.bm.dataload.rm.PrepareRMAdminUser" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
-        <constructor-arg name="username" value="${alfresco.adminUser}" />
-        <constructor-arg name="password" value="${alfresco.adminPwd}" />
+        <constructor-arg name="username" value="${alfresco.admin.user}" />
+        <constructor-arg name="password" value="${alfresco.admin.pwd}" />
         <property name="chart" value="false"/>
     </bean>
 
