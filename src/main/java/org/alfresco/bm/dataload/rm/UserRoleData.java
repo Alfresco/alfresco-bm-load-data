@@ -20,9 +20,6 @@ package org.alfresco.bm.dataload.rm;
 
 import java.io.Serializable;
 
-import org.alfresco.bm.site.Role;
-
-
 /**
  * Simple DTO representing a role a user has on a site.
  * 
@@ -32,11 +29,11 @@ import org.alfresco.bm.site.Role;
 public class UserRoleData implements Serializable
 {
     private static final long serialVersionUID = -2241893659787720414L;
-    private String username;
-    private String siteId;
-    private Role role;
+    private final String username;
+    private final String siteId;
+    private final String role;
 
-    public UserRoleData(final String username, final String siteId, final Role role)
+    public UserRoleData(final String username, final String siteId, final String role)
     {
         this.username = username;
         this.siteId = siteId;
@@ -47,29 +44,13 @@ public class UserRoleData implements Serializable
     {
         return username;
     }
-
-    public void setUsername(String username)
-    {
-        this.username = username;
-    }
-
-    public Role getRole()
+    public String getRole()
     {
         return role;
     }
-    public void setRole(Role role)
-    {
-        this.role = role;
-    }
-    
     public String getSiteId()
     {
         return siteId;
-    }
-
-    public void setSiteId(String siteId)
-    {
-        this.siteId = siteId;
     }
 
     @Override

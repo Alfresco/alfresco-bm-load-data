@@ -2,15 +2,12 @@ package org.alfresco.bm.dataload.rm;
 
 import java.util.Random;
 
-import org.alfresco.bm.site.Role;
-
 /**
  * Site membership role based on record management site.
  * 
- * 
  * @author Michael Suzuki
  */
-public enum RMRole implements Role
+public enum RMRole
 {
     User,
     PowerUser,

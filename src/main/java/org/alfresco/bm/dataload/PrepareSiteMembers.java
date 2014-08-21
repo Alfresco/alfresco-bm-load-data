@@ -2,6 +2,7 @@ package org.alfresco.bm.dataload;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
@@ -15,25 +16,25 @@ import org.alfresco.bm.user.UserDataService;
 
 /**
  * Prepares site members for creation by populating the site members collection.
- * 
- * The number of site members to create is driven by:
- * 
- * maxSites: if -1, uses all created sites in the sites collection
- * maxMembersPerSite: must be greater than 0
+ * <p/>
+ * The number of site members to create is driven by: <br/>
+ * maxSites: if -1, uses all created sites in the sites collection maxMembersPerSite: must be greater than 0
+ * <p/>
+ * TODO: only site members from same domain as site at present.
  * 
  * @author steveglover
- *
- * TODO: only site members from same network as site at present.
+ * @author Derek Hulley
  */
 public class PrepareSiteMembers extends AbstractEventProcessor
 {
     public static final String EVENT_NAME_SITE_MEMBERS_PREPARED = "siteMembersPrepared";
+    public static final int DEFAULT_SITE_MEMBERS = 20;
             
     private String eventNameSiteMembersPrepared;
     private UserDataService userDataService;
     private SiteDataService siteDataService;
 
-    private int maxSiteMembers;
+    private int siteMembers;
 
     /**
      * @param services              data collections
@@ -44,15 +45,16 @@ public class PrepareSiteMembers extends AbstractEventProcessor
         this.userDataService = userDataService;
         this.siteDataService = siteDataService; 
         this.eventNameSiteMembersPrepared = EVENT_NAME_SITE_MEMBERS_PREPARED;
+        this.siteMembers = DEFAULT_SITE_MEMBERS;
     }
 
-    public void setMaxSiteMembers(int maxSiteMembers)
+    public void setSiteMembers(int siteMembers)
     {
-        if(maxSiteMembers < 1)
+        if (siteMembers < 1)
         {
             throw new IllegalArgumentException("maxSiteMembers must be greater than 0");
         }
-        this.maxSiteMembers = maxSiteMembers;
+        this.siteMembers = siteMembers;
     }
 
     /**
@@ -74,46 +76,45 @@ public class PrepareSiteMembers extends AbstractEventProcessor
         long totalSiteMembersCount = siteDataService.countSiteMembers();
         long totalDiff = maxSiteMembers - totalSiteMembersCount;
         
-        Iterator<String> networksIt = userDataService.getDomainsIterator();
-        while(networksIt.hasNext())
+        Iterator<String> domains = userDataService.getDomainsIterator();
+        while (domains.hasNext())
         {
-            String networkId = networksIt.next();
+            String domain = domains.next();
 
-            // users from network
-            Iterator<UserData> users = userDataService.getUsersInDomain(networkId, 0, 200).iterator();
-
-            // iterate through sites that exist in the given network on the Alfresco server
-            Iterator<SiteData> sitesIt = siteDataService.sitesIterator(networkId, true);
-            while(sitesIt.hasNext() && totalDiff > 0)
+            // iterate through sites that exist in the given domain on the Alfresco server
+            int skipSites = 0;
+            List<SiteData> sites = siteDataService.getSites(Boolean.TRUE, domain, skipSites, 200);
+            for (SiteData site : sites)
             {
-                final SiteData site = (SiteData)sitesIt.next();
-                long siteMembersCount = siteDataService.countSiteMembers(site.getSiteId());
-                long diff = maxMembersPerSite - siteMembersCount;
-                if(diff > 0)
+                skipSites++;
+                
+                String siteId = site.getSiteId();
+                long siteMembersCount = siteDataService.countSiteMembers(siteId);
+                long toCreate = maxMembersPerSite - siteMembersCount;
+                if (toCreate <= 0)
                 {
-                    String siteNetworkId = site.getNetworkId();
-                    if(!networkId.equals(siteNetworkId))
+                    // This site has enough members
+                    continue;
+                }
+                
+                // Loop through available users in the domain
+                int skipUsers = 0;
+                List<UserData> users = userDataService.getUsersInDomain(domain, skipUsers, 200);
+                for (UserData user : users)
+                {
+                    skipUsers++;
+                    String username = user.getUsername();
+                    String role = SiteRole.SiteContributor.toString();              // TODO more random, spread of roles?
+                    // If the user is already a member, then move on
+                    if (siteDataService.isSiteMember(siteId, username))
                     {
-                        logger.warn("Unexpected site network mismatch: expected " + networkId + ", got " + siteNetworkId);
                         continue;
                     }
-
-                    while(users.hasNext() && diff > 0 && totalDiff > 0)
-                    {
-                        UserData user = users.next();
-                        String userId = user.getEmail();
-                        SiteRole role = SiteRole.SiteContributor; // TODO more random, spread of roles?
-                        if(!siteDataService.isSiteMember(site.getSiteId(), userId))
-                        {
-                            SiteMember siteMember = new SiteMember(userId, site.getSiteId(), site.getNetworkId(), role.toString());
-                            siteDataService.addSiteMember(siteMember);
-                            membersCount++;
-    
-                            diff--;
-                            totalDiff--;
-                        }
-                    }
+                    SiteMember siteMember = new SiteMember(username, site.getSiteId(), site.getDomain(), role);
+                    siteDataService.addSiteMember(siteMember);
+                    toCreate--;
                 }
+                users = userDataService.getUsersInDomain(domain, skipUsers, 200);
             }
         }
 

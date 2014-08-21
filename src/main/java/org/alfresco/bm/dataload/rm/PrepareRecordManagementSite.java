@@ -88,7 +88,7 @@ public class PrepareRecordManagementSite extends AuthenticatedHttpEventProcessor
             recordManagementSite = new SiteData();
             recordManagementSite.setSiteId(RECORDS_MANAGEMENT_SITE_ID);
             recordManagementSite.setTitle(RECORDS_MANAGEMENT_SITE_TITLE);
-            recordManagementSite.setNetworkId("default");
+            recordManagementSite.setDomain("default");
             recordManagementSite.setDescription(RECORDS_MANAGEMENT_SITE_DESC);
             recordManagementSite.setSitePreset(RM_SITE_PRESET);
             recordManagementSite.setVisibility("PUBLIC");

@@ -2,26 +2,22 @@ package org.alfresco.bm.dataload;
 
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
+import org.alfresco.bm.site.SiteMember;
+import org.alfresco.bm.site.SiteRole;
 import org.alfresco.bm.site.SiteVisibility;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
 
 /**
  * Prepares sites for creation by populating the sites collection.
- * 
- * The number of sites is driven by:
- * 
- * the number of networks (implicit in the Users collection)
- * maxSitesPerNetwork: the maximum number of sites per network.
- * 
- * startSite: start number site names from here.
+ * <p/>
+ * The number of sites is driven by: {@link #setSitesPerDomain(int)}
  * 
  * @author steveglover
  *
@@ -29,12 +25,12 @@ import org.alfresco.bm.user.UserDataService;
 public class PrepareSites extends AbstractEventProcessor
 {
     public static final String EVENT_NAME_SITES_PREPARED = "sitesPrepared";
-    public static final int DEFAULT_MAX_SITES_PER_NETWORK = Integer.MAX_VALUE; // all
+    public static final int DEFAULT_SITES_PER_DOMAIN = 100;
 
-    private int maxSitesPerNetwork;
-    private String eventNameSitesPrepared;
     private UserDataService userDataService;
     private SiteDataService siteDataService;
+    private String eventNameSitesPrepared;
+    private int sitesPerDomain;
 
     /**
      * @param services              data collections
@@ -44,17 +40,13 @@ public class PrepareSites extends AbstractEventProcessor
         super();
         this.userDataService = userDataService;
         this.siteDataService = siteDataService; 
-        this.maxSitesPerNetwork = DEFAULT_MAX_SITES_PER_NETWORK;
         this.eventNameSitesPrepared = EVENT_NAME_SITES_PREPARED;
-    }
-    
-    public void init()
-    {
+        this.sitesPerDomain = DEFAULT_SITES_PER_DOMAIN;
     }
 
-    public void setMaxSitesPerNetwork(int maxSitesPerNetwork)
+    public void setSitesPerDomain(int sitesPerDomain)
     {
-        this.maxSitesPerNetwork = maxSitesPerNetwork;
+        this.sitesPerDomain = sitesPerDomain;
     }
 
     /**
@@ -70,64 +62,53 @@ public class PrepareSites extends AbstractEventProcessor
     public EventResult processEvent(Event event) throws Exception
     {
         int sitesCount = 0;
-        int networksCount = 0;
+        int domainsCount = 0;
 
-        Iterator networksIt = userDataService.getDomainsIterator();
-        while(networksIt.hasNext())
+        Iterator domains = userDataService.getDomainsIterator();
+        
+        int domainCount = 0;
+        while (domains.hasNext())
         {
-            final String networkId = (String)networksIt.next();
+            final String domain = (String) domains.next();
 
-            long numSitesInNetwork = siteDataService.countSites(networkId);
-            if(numSitesInNetwork < maxSitesPerNetwork)
+            for (int siteCount = 0; siteCount < sitesPerDomain; siteCount++)
             {
-                List<UserData> usersInNetwork = userDataService.getUsersInDomain(networkId, 0, 200);
-                if(usersInNetwork.size() > 0)
+                String siteId = String.format("Site.%05d.%05d", domainCount, siteCount);
+                SiteData site = siteDataService.findSiteBySiteId(siteId);
+                if(site != null)
                 {
-                    // there are users in the network, which means that the network exists. Proceed.
-                    int userIndex = 0;
-    
-                    for (int j = 0; j < maxSitesPerNetwork; j++)
-                    {
-                        String siteId = String.format("Site.%05d.%05d", System.currentTimeMillis(), j);
-                        SiteData site = siteDataService.findSiteBySiteId(siteId);
-                        if(site != null)
-                        {
-                            // Site already exists
-                            continue;
-                        }
-        
-                        if(userIndex >= usersInNetwork.size())
-                        {
-                            userIndex = 0;
-                        }
-    
-                        UserData creator = usersInNetwork.get(userIndex);
-                        //
-                        // Create data
-                        final SiteData newSite = new SiteData();
-                        newSite.setDescription("");
-                        newSite.setSiteId(siteId);
-                        newSite.setSitePreset("preset");
-                        newSite.setTitle(siteId);
-                        newSite.setVisibility(SiteVisibility.getRandomVisibility());
-                        newSite.setType("{http://www.alfresco.org/model/site/1.0}site");
-                        newSite.setNetworkId(networkId);
-                        newSite.setCreatedBy(creator.getEmail());
-                        newSite.setCreated(Boolean.FALSE);
-        
-                        // Persist
-                        siteDataService.addSite(newSite);
-                        sitesCount++;
-                        userIndex++;
-                    }
+                    // Site already exists
+                    continue;
                 }
-    
-                networksCount++;
+
+                // Choose a user that will be the manager
+                UserData userData = userDataService.getRandomUserFromDomain(domain);
+                String username = userData.getUsername();
+                //
+                // Create data
+                final SiteData newSite = new SiteData();
+                newSite.setDescription("");
+                newSite.setSiteId(siteId);
+                newSite.setSitePreset("preset");
+                newSite.setTitle(siteId);
+                newSite.setVisibility(SiteVisibility.getRandomVisibility());
+                newSite.setType("{http://www.alfresco.org/model/site/1.0}site");
+                newSite.setDomain(domain);
+                newSite.setCreatedBy(username);
+                newSite.setCreated(Boolean.FALSE);
+
+                // Persist
+                siteDataService.addSite(newSite);
+                sitesCount++;
+                
+                // Record the user as the site manager
+                SiteMember siteMember = new SiteMember(username, siteId, domain, SiteRole.SiteManager.toString());
+                siteDataService.addSiteMember(siteMember);
             }
         }
 
         // We need an event to mark completion
-        String msg = "Prepared " + sitesCount + " sites in " + networksCount + " networks.";
+        String msg = "Prepared " + sitesCount + " sites in " + domainsCount + " domains.";
         Event outputEvent = new Event(eventNameSitesPrepared, 0L, msg);
 
         // Create result

@@ -80,11 +80,11 @@ public class PrepareRMRoles extends AbstractEventProcessor
         {
             for(UserData user : users)
             {
-                RMRole role = RMRole.getRandomRole();
+                String role = RMRole.getRandomRole().toString();
                 SiteMember siteMember = siteDataService.getSiteMember(rmSite.getSiteId(), user.getUsername(), role);
                 if(siteMember == null)
                 {
-                    siteMember = new SiteMember(user.getUsername(), rmSite.getSiteId(), rmSite.getNetworkId(), role.toString());
+                    siteMember = new SiteMember(user.getUsername(), rmSite.getSiteId(), rmSite.getDomain(), role.toString());
                     //persist user and with an rm role
                     siteDataService.addSiteMember(siteMember);
                 }
