@@ -28,42 +28,28 @@
         <constructor-arg name="siteMembers" value="${site.members.collection.name}" />
     </bean>
 
-    <bean id="preferredCMISEndPoint" class="org.springframework.social.alfresco.api.CMISEndpoint">
-        <constructor-arg value="${publicapi.cmis.binding}"/>
-        <constructor-arg value="${publicapi.cmis.version}"/>
-    </bean>
-
-    <bean id="basicAuthPublicApiFactory" class="org.alfresco.bm.publicapi.factory.BasicAuthPublicApiFactory">
-        <constructor-arg name="scheme" value="${alfresco.scheme}"/>
-        <constructor-arg name="host" value="${alfresco.server}"/>
-        <constructor-arg name="port" value="${alfresco.port}"/>
-        <constructor-arg name="preferredCMISEndPoint" ref="preferredCMISEndPoint"/>
-        <constructor-arg name="maxNumberOfConnections" value="${http.connection.max}"/>
-        <constructor-arg name="connectionTimeoutMs" value="${http.connection.timeoutMs}"/>
-        <constructor-arg name="socketTimeoutMs" value="${http.socket.timeoutMs}"/>
-        <constructor-arg name="socketTtlMs" value="${http.socket.ttlMs}"/>
-        <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="context" value="${alfresco.context}"/>
-        <constructor-arg name="publicApiServletName" value="${alfresco.public.api.servlet.name}"/>
-        <constructor-arg name="serviceServletName" value="${alfresco.service.servlet.name}"/>
-    </bean>
-
-    <bean id="oAuthPublicApiFactory" class="org.alfresco.bm.publicapi.factory.OAuthPublicApiFactory">
-        <constructor-arg name="host" value="${alfresco.server}"/>
-        <constructor-arg name="port" value="${alfresco.port}"/>
-        <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="redirectUri" value="${oauth.redirect.uri}"/>
-        <constructor-arg name="consumerKey" value="${oauth.consumer.key}"/>
-        <constructor-arg name="consumerSecret" value="${oauth.consumer.secret}"/>
-    </bean>
-    
     <bean id="authenticationDetailsProvider" class="org.alfresco.bm.http.UserDataAutheticationDetailsProvider">
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="adminUserName" value="${alfresco.admin.user}" />
         <constructor-arg name="adminPassword" value="${alfresco.admin.pwd}" />
     </bean>
     
-    <alias name="basicAuthPublicApiFactory" alias="publicApiFactory"/>
+    <!-- API factories -->
+    
+    <bean id="publicApiFactory" class="org.alfresco.bm.publicapi.factory.BasicAuthPublicApiFactory">
+        <constructor-arg name="scheme" value="${alfresco.scheme}"/>
+        <constructor-arg name="host" value="${alfresco.server}"/>
+        <constructor-arg name="port" value="${alfresco.port}"/>
+        <constructor-arg name="preferredCMISEndPoint"><null/></constructor-arg>
+        <constructor-arg name="maxNumberOfConnections" value="${http.connection.max}"/>
+        <constructor-arg name="connectionTimeoutMs" value="${http.connection.timeoutMs}"/>
+        <constructor-arg name="socketTimeoutMs" value="${http.socket.timeoutMs}"/>
+        <constructor-arg name="socketTtlMs" value="${http.socket.ttlMs}"/>
+        <constructor-arg name="userDataService" ref="userDataService"/>
+        <constructor-arg name="context" value="${alfresco.context}"/>
+        <constructor-arg name="publicApiServletName" value="${alfresco.apiServletName}"/>
+        <constructor-arg name="serviceServletName" value="${alfresco.serviceServletName}"/>
+    </bean>
 
     <!-- Events -->
 
@@ -86,26 +72,19 @@
         <property name="chart" value="false"/>
     </bean>
     
-    <bean id="event.createSites" class="org.alfresco.bm.publicapi.CreateSites" parent="event.base" >
+    <bean id="event.createSites" class="org.alfresco.bm.dataload.CreateSites" parent="event.base" >
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <property name="chart" value="false"/>
     </bean>
     
-    <bean id="event.createSite" class="org.alfresco.bm.publicapi.process.CreateSite" parent="event.base">
-        <constructor-arg index="0" name="siteDataService" ref="siteDataService"/>
-        <constructor-arg index="1" name="publicApiFactory" ref="publicApiFactory"/>
-        <constructor-arg index="2" name="eventNameSiteCreated" value="siteCreated"/>
+    <bean id="event.createSite" class="org.alfresco.bm.dataload.CreateSite" parent="event.base">
+        <constructor-arg name="siteDataService" ref="siteDataService"/>
+        <constructor-arg name="publicApiFactory" ref="publicApiFactory"/>
     </bean>
     
     <!-- Barrier after site-creation scheduling is complete -->
-    <bean id="event.sitesCreated" class="org.alfresco.bm.dataload.RaiseEventsEventProcessor" parent="event.base" >
-        <constructor-arg name="outputEventNames">
-            <list>
-                <value>prepareSiteMembers</value>
-                <value>prepareRatioUserSiteMemberships</value>
-                <value>loadRMData</value>
-            </list>
-        </constructor-arg>
+    <bean id="event.sitesCreated" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
+        <constructor-arg name="outputEventName" value="prepareSiteMembers" />
         <property name="chart" value="false"/>
     </bean>
 
@@ -113,7 +92,7 @@
     <bean id="event.prepareSiteMembers" class="org.alfresco.bm.dataload.PrepareSiteMembers" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
-        <property name="siteMembers" value="${load.siteMembers}" />
+        <property name="usersPerSite" value="${load.usersPerSite}" />
         <property name="chart" value="false"/>
     </bean>
 
@@ -122,84 +101,52 @@
         <property name="chart" value="false"/>
     </bean>
 
-    <bean id="event.createSiteMembers" class="org.alfresco.bm.publicapi.CreateSiteMembers" parent="event.base" >
-        <constructor-arg index="0" name="siteDataService" ref="siteDataService"/>
+    <bean id="event.createSiteMembers" class="org.alfresco.bm.dataload.CreateSiteMembers" parent="event.base" >
+        <constructor-arg name="siteDataService" ref="siteDataService"/>
         <property name="chart" value="false"/>
     </bean>
 
-    <bean id="event.createSiteMember" class="org.alfresco.bm.publicapi.CreateSiteMember" parent="event.base">
-        <constructor-arg index="0" ref="siteDataService"/>
-        <constructor-arg index="1" ref="publicApiFactory"/>
-        <constructor-arg index="2" value="siteMemberCreated"/>
-    </bean>
-
-    <bean id="event.siteMembersCreated" class="org.alfresco.bm.event.DoNothingEventProcessor" parent="event.base" >
-        <property name="chart" value="false"/>
+    <bean id="event.createSiteMember" class="org.alfresco.bm.dataload.CreateSiteMember" parent="event.base">
+        <constructor-arg name="userDataService" ref="userDataService"/>
+        <constructor-arg name="siteDataService" ref="siteDataService"/>
+        <constructor-arg name="publicApiFactory" ref="publicApiFactory"/>
     </bean>
 
     <bean id="event.siteMemberCreated" class="org.alfresco.bm.event.DoNothingEventProcessor" parent="event.base" >
         <property name="chart" value="false"/>
     </bean>
     
-    <bean id="event.loadRMData" class="org.alfresco.bm.dataload.rm.StartRecordManagement" parent="event.base" >
-        <constructor-arg name="enabled" value="${alfresco.rm.enabled}" />
+    <bean id="event.siteMembersCreated" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
+        <constructor-arg name="outputEventName" value="prepareRM" />
         <property name="chart" value="false"/>
     </bean>
-    
-    <bean id="event.prepareRMAdmin" class="org.alfresco.bm.dataload.rm.PrepareRMAdminUser" parent="event.base" >
+
+    <bean id="event.prepareRM" class="org.alfresco.bm.dataload.rm.PrepareRM" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
-        <constructor-arg name="username" value="${alfresco.admin.user}" />
-        <constructor-arg name="password" value="${alfresco.admin.pwd}" />
-        <property name="chart" value="false"/>
-    </bean>
-
-    <bean id="event.rmAdminPrepared" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
-        <constructor-arg name="outputEventName" value="prepareRMSite" />
-        <property name="chart" value="false"/>
-    </bean>
-
-    <bean id="event.prepareRMSite" class="org.alfresco.bm.dataload.rm.PrepareRecordManagementSite" parent="event.base" >
-        <constructor-arg name="httpClientProvider" ref="httpClientProvider" />
-        <constructor-arg name="authenticationDetailsProvider" ref="authenticationDetailsProvider" />
-        <constructor-arg name="baseUrl" value="${alfresco.url}" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
+        <constructor-arg name="enabled" value="${rm.enabled}" />
+        <constructor-arg name="username" value="${rm.username}" />
+        <constructor-arg name="password" value="${rm.password}" />
         <property name="chart" value="false"/>
+        <property name="eventNameRMPrepared" value="createRMSite"/>
     </bean>
     
-    <bean id="event.rmSitePrepared" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
-        <constructor-arg name="outputEventName" value="createRMSite" />
-        <property name="chart" value="false"/>
-    </bean>
-    
-    <bean id="event.createRMSite" class="org.alfresco.bm.publicapi.process.CreateSite" parent="event.base">
+    <bean id="event.createRMSite" class="org.alfresco.bm.dataload.CreateSite" parent="event.base">
         <constructor-arg index="0" name="siteDataService" ref="siteDataService"/>
         <constructor-arg index="1" name="publicApiFactory" ref="publicApiFactory"/>
-        <constructor-arg index="2" name="eventNameSiteCreated" value="rmSiteCreated"/>
+        <property name="eventNameSiteCreated" value="prepareRMRoles"/>
     </bean>
     
-    <!-- Barrier after site-creation scheduling is complete -->
-    <bean id="event.rmSiteCreated" class="org.alfresco.bm.dataload.RaiseEventsEventProcessor" parent="event.base" >
-        <constructor-arg name="outputEventNames">
-            <list>
-                <value>prepareRMRole</value>
-            </list>
-        </constructor-arg>
-        <property name="chart" value="false"/>
-    </bean>
-
-    <bean id="event.prepareRMRole" class="org.alfresco.bm.dataload.rm.PrepareRMRoles" parent="event.base" >
+    <bean id="event.prepareRMRoles" class="org.alfresco.bm.dataload.rm.PrepareRMRoles" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <property name="chart" value="false"/>
-        <property name="count" value="${prepare.rm.role.max.user.count}"/>
+        <property name="userCount" value="${rm.userCount}"/>
+        <property name="assignmentDelay" value="${rm.assignmentDelay}"/>
+        <property name="eventNameRMAssignRole" value="assignRMRole"/>
     </bean>
     
-    <bean id="event.rmRolesPrepared" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
-        <constructor-arg name="outputEventName" value="assignRole" />
-        <property name="chart" value="false"/>
-    </bean>
-    
-    <bean id="event.assignRole" class="org.alfresco.bm.dataload.rm.AssignRole" parent="event.base" >
+    <bean id="event.assignRMRole" class="org.alfresco.bm.dataload.rm.AssignRMRole" parent="event.base" >
         <constructor-arg name="httpClientProvider" ref="httpClientProvider" />
         <constructor-arg name="authenticationDetailsProvider" ref="authenticationDetailsProvider" />
         <constructor-arg name="baseUrl" value="${alfresco.url}" />
@@ -207,8 +154,4 @@
         <property name="chart" value="false"/>
     </bean>
     
-    <bean id="event.rmRoleAssigned" class="org.alfresco.bm.event.DoNothingEventProcessor" parent="event.base" >
-        <property name="chart" value="false"/>
-    </bean>
-  
 </beans>

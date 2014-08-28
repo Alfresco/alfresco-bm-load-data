@@ -1,14 +1,33 @@
+/*
+ * Copyright (C) 2005-2014 Alfresco Software Limited.
+ *
+ * This file is part of Alfresco
+ *
+ * Alfresco is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Alfresco is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.alfresco.bm.dataload;
 
 import java.util.Collections;
 import java.util.Iterator;
 
+import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
-import org.alfresco.bm.site.SiteMember;
+import org.alfresco.bm.site.SiteMemberData;
 import org.alfresco.bm.site.SiteRole;
 import org.alfresco.bm.site.SiteVisibility;
 import org.alfresco.bm.user.UserData;
@@ -19,8 +38,8 @@ import org.alfresco.bm.user.UserDataService;
  * <p/>
  * The number of sites is driven by: {@link #setSitesPerDomain(int)}
  * 
- * @author steveglover
- *
+ * @author Derek Hulley
+ * @since 2.0
  */
 public class PrepareSites extends AbstractEventProcessor
 {
@@ -66,16 +85,15 @@ public class PrepareSites extends AbstractEventProcessor
 
         Iterator domains = userDataService.getDomainsIterator();
         
-        int domainCount = 0;
         while (domains.hasNext())
         {
+            domainsCount++;
             final String domain = (String) domains.next();
-
             for (int siteCount = 0; siteCount < sitesPerDomain; siteCount++)
             {
-                String siteId = String.format("Site.%05d.%05d", domainCount, siteCount);
-                SiteData site = siteDataService.findSiteBySiteId(siteId);
-                if(site != null)
+                String siteId = String.format("Site.%s.%05d", domain, siteCount);
+                SiteData site = siteDataService.getSite(siteId);
+                if (site != null)
                 {
                     // Site already exists
                     continue;
@@ -84,7 +102,6 @@ public class PrepareSites extends AbstractEventProcessor
                 // Choose a user that will be the manager
                 UserData userData = userDataService.getRandomUserFromDomain(domain);
                 String username = userData.getUsername();
-                //
                 // Create data
                 final SiteData newSite = new SiteData();
                 newSite.setDescription("");
@@ -94,15 +111,18 @@ public class PrepareSites extends AbstractEventProcessor
                 newSite.setVisibility(SiteVisibility.getRandomVisibility());
                 newSite.setType("{http://www.alfresco.org/model/site/1.0}site");
                 newSite.setDomain(domain);
-                newSite.setCreatedBy(username);
-                newSite.setCreated(Boolean.FALSE);
+                newSite.setCreationState(DataCreationState.NotScheduled);
 
                 // Persist
                 siteDataService.addSite(newSite);
                 sitesCount++;
                 
                 // Record the user as the site manager
-                SiteMember siteMember = new SiteMember(username, siteId, domain, SiteRole.SiteManager.toString());
+                final SiteMemberData siteMember = new SiteMemberData();
+                siteMember.setUsername(username);
+                siteMember.setSiteId(siteId);
+                siteMember.setRole(SiteRole.SiteManager.toString());
+                siteMember.setCreationState(DataCreationState.NotScheduled);
                 siteDataService.addSiteMember(siteMember);
             }
         }

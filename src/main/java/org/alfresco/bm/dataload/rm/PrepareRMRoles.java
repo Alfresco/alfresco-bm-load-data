@@ -1,17 +1,38 @@
+/*
+ * Copyright (C) 2005-2014 Alfresco Software Limited.
+ *
+ * This file is part of Alfresco
+ *
+ * Alfresco is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Alfresco is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.alfresco.bm.dataload.rm;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
-import org.alfresco.bm.site.SiteMember;
+import org.alfresco.bm.site.SiteMemberData;
 import org.alfresco.bm.user.UserData;
-import org.alfresco.bm.user.UserData.UserCreationState;
 import org.alfresco.bm.user.UserDataService;
+
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
 
 /**
  * Prepares record management site users with roles relating to record management.
@@ -24,17 +45,22 @@ import org.alfresco.bm.user.UserDataService;
  *     <li>Records Management User</li>
  * </ul>
  * @author Michael Suzuki
+ * @author Derek Hulley
  * @version 1.4
- *
  */
 public class PrepareRMRoles extends AbstractEventProcessor
 {
-    public static final String EVENT_NAME_PREPARE_RM_ROLES = "rmRolesPrepared";
+    public static final String DEFAULT_EVENT_NAME_RM_ASSIGN_ROLE = "rmAssignRole";
+    public static final String DEFAULT_EVENT_NAME_RM_ROLES_PREPARED = "rmRolesPrepared";
+    public static final int DEFAULT_USER_COUNT = 50;
+    public static final long DEFAULT_ASSIGNMENT_DELAY = 100L;
             
-    private String eventNamePrepareRMRoles;
     private UserDataService userDataService;
     private SiteDataService siteDataService;
-    private int count;
+    private String eventNameRMAssignRole;
+    private String eventNameRMRolesPrepared;
+    private int userCount;
+    private long assignmentDelay;
 
     /**
      * @param services              data collections
@@ -43,62 +69,89 @@ public class PrepareRMRoles extends AbstractEventProcessor
     {
         super();
         this.userDataService = userDataService;
-        this.siteDataService = siteDataService; 
-        this.eventNamePrepareRMRoles = EVENT_NAME_PREPARE_RM_ROLES;
+        this.siteDataService = siteDataService;
+        this.eventNameRMAssignRole = DEFAULT_EVENT_NAME_RM_ASSIGN_ROLE;
+        this.eventNameRMRolesPrepared = DEFAULT_EVENT_NAME_RM_ROLES_PREPARED;
+        this.userCount = DEFAULT_USER_COUNT;
+        this.assignmentDelay = DEFAULT_ASSIGNMENT_DELAY;
     }
 
     /**
-     * Override the {@link #EVENT_NAME_PREPARE_RM_ROLES default} event name when site members have been created.
+     * Override the {@link #DEFAULT_EVENT_NAME_RM_ASSIGN_ROLE default} event name to assign RM roles
      */
-    public void setEventNameSiteMembersPrepared(String eventNameSiteMembersPrepared)
+    public void setEventNameRMAssignRole(String eventNameRMAssignRole)
     {
-        this.eventNamePrepareRMRoles = eventNameSiteMembersPrepared;
+        this.eventNameRMAssignRole = eventNameRMAssignRole;
+    }
+
+    /**
+     * Override the {@link #DEFAULT_EVENT_NAME_RM_ROLES_PREPARED default} event name when rm roles have been prepared
+     */
+    public void setEventNameRMRolesPrepared(String eventNameRMRolesPrepared)
+    {
+        this.eventNameRMRolesPrepared = eventNameRMRolesPrepared;
+    }
+
+    /**
+     * Override the {@link #DEFAULT_USER_COUNT default} number of RM users
+     */
+    public void setUserCount(int userCount)
+    {
+        this.userCount = userCount;
+    }
+
+    /**
+     * Override the {@link #DEFAULT_ASSIGNMENT_DELAY default} time between RM role assignment events
+     */
+    public void setAssignmentDelay(long assignmentDelay)
+    {
+        this.assignmentDelay = assignmentDelay;
     }
 
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
-        
         List<Event> nextEvents = new ArrayList<Event>();
-        //Find rm site
-        SiteData rmSite = siteDataService.findSiteBySiteId("rm");
-        if(rmSite == null)
+        
+        // Find RM site
+        SiteData rmSite = siteDataService.getSite(PrepareRM.RM_SITE_ID);
+        if (rmSite == null)
         {
             // There is nothing more to do
-            Event doneEvent = new Event("No record manamgent site found in site collection", System.currentTimeMillis(), null);
-            nextEvents.add(doneEvent);
+            return new EventResult("There is no RM site, so no roles need preparing.", new Event(eventNameRMRolesPrepared, null));
         }
-        //Find all users that are not in rm
-        List<UserData> users = userDataService.getUsersByCreationState(UserCreationState.Created, 0, count);
-        if(users.size() == 0)
+        String rmSiteId = rmSite.getSiteId();
+        
+        long nextEventTime = System.currentTimeMillis();
+        List<UserData> users = userDataService.getUsersByCreationState(DataCreationState.Created, 0, userCount);
+        for (UserData user : users)
         {
-            // There is nothing more to do
-            Event doneEvent = new Event(eventNamePrepareRMRoles, System.currentTimeMillis(), null);
-            nextEvents.add(doneEvent);
-        }
-        else
-        {
-            for(UserData user : users)
+            nextEventTime += assignmentDelay;
+            
+            String username = user.getUsername();
+            SiteMemberData siteMember = siteDataService.getSiteMember(rmSiteId, username);
+            if (siteMember != null)
             {
-                String role = RMRole.getRandomRole().toString();
-                SiteMember siteMember = siteDataService.getSiteMember(rmSite.getSiteId(), user.getUsername(), role);
-                if(siteMember == null)
-                {
-                    siteMember = new SiteMember(user.getUsername(), rmSite.getSiteId(), rmSite.getDomain(), role.toString());
-                    //persist user and with an rm role
-                    siteDataService.addSiteMember(siteMember);
-                }
-                //site member is false which means it needs to be created
-                if(!siteMember.isCreated())
-                {
-                    UserRoleData data = new UserRoleData(user.getUsername(), rmSite.getSiteId(), role);
-                    Event nextEvent = new Event(eventNamePrepareRMRoles, System.currentTimeMillis(), data);
-                    nextEvents.add(nextEvent);
-                }
+                // The site membership already exists
+                continue;
             }
+            // Persist user with an rm role - we go directly to the scheduled state
+            siteMember = new SiteMemberData();
+            siteMember.setCreationState(DataCreationState.Scheduled);
+            siteMember.setUsername(username);
+            siteMember.setSiteId(rmSiteId);
+            siteMember.setRole(RMRole.getRandomRole().toString());
+            siteDataService.addSiteMember(siteMember);
+            
+            DBObject data = new BasicDBObject()
+                .append(AssignRMRole.FIELD_ROLE, siteMember.getRole())
+                .append(AssignRMRole.FIELD_USERNAME, username);
+            Event schedule = new Event(eventNameRMAssignRole, nextEventTime, data);
+            nextEvents.add(schedule);
         }
         
-        String msg = "Prepared " + users.size() + "users as rm site members";
+        String msg = "Scheduled " + nextEvents.size() + " RM site member assignments";
+        nextEvents.add(new Event(eventNameRMRolesPrepared, nextEventTime + assignmentDelay));
         // Return messages + next events
         EventResult result = new EventResult(msg, nextEvents, true);
 
@@ -109,15 +162,4 @@ public class PrepareRMRoles extends AbstractEventProcessor
         }
         return result;
     }
-
-    public int getCount()
-    {
-        return count;
-    }
-
-    public void setCount(int count)
-    {
-        this.count = count;
-    }
-    
 }
