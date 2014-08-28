@@ -19,13 +19,13 @@
     
     <bean id="userDataService" class="org.alfresco.bm.user.UserDataServiceImpl">
         <constructor-arg name="db" ref="testMongoDB" />
-        <constructor-arg name="collection" value="${users.collection.name}" />
+        <constructor-arg name="collection" value="${mirror.users}" />
     </bean>
 
     <bean id="siteDataService" class="org.alfresco.bm.site.SiteDataServiceImpl">
         <constructor-arg name="db" ref="testMongoDB" />
-        <constructor-arg name="sites" value="${sites.collection.name}" />
-        <constructor-arg name="siteMembers" value="${site.members.collection.name}" />
+        <constructor-arg name="sites" value="${mirror.sites}" />
+        <constructor-arg name="siteMembers" value="${mirror.siteMembers}" />
     </bean>
 
     <bean id="authenticationDetailsProvider" class="org.alfresco.bm.http.UserDataAutheticationDetailsProvider">
