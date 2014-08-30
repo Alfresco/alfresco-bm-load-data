@@ -19,6 +19,7 @@
 package org.alfresco.bm.dataload.rm;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.alfresco.bm.data.DataCreationState;
@@ -122,10 +123,18 @@ public class PrepareRMRoles extends AbstractEventProcessor
         }
         String rmSiteId = rmSite.getSiteId();
         
-        long nextEventTime = System.currentTimeMillis();
+        // Check how many users are already members
+        int rmSiteMemberCount = (int) siteDataService.countSiteMembers(PrepareRM.RM_SITE_ID, DataCreationState.Created);
+        int toSchedule = userCount - rmSiteMemberCount;
+        int scheduled = 0;
+        
         List<UserData> users = userDataService.getUsersByCreationState(DataCreationState.Created, 0, userCount);
-        for (UserData user : users)
+        Iterator<UserData> usersIterator = users.iterator();
+        long nextEventTime = System.currentTimeMillis();
+        while (scheduled < toSchedule && usersIterator.hasNext())
         {
+            UserData user = usersIterator.next();
+            
             nextEventTime += assignmentDelay;
             
             String username = user.getUsername();
@@ -148,6 +157,8 @@ public class PrepareRMRoles extends AbstractEventProcessor
                 .append(AssignRMRole.FIELD_USERNAME, username);
             Event schedule = new Event(eventNameRMAssignRole, nextEventTime, data);
             nextEvents.add(schedule);
+            
+            scheduled++;
         }
         
         String msg = "Scheduled " + nextEvents.size() + " RM site member assignments";

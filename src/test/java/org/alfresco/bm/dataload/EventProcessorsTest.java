@@ -88,14 +88,12 @@ public class EventProcessorsTest
     }
     
     @Test
-    public synchronized void prepareSites() throws Exception
+    public void prepareSites() throws Exception
     {
         StopWatch stopWatch = new StopWatch();
         PrepareSites processor = new PrepareSites(userDataService, siteDataService);
         EventResult result = processor.processEvent(null, stopWatch);
         assertEquals("Prepared 100 sites.", result.getData());
-        
-        this.wait(500L);        // Allow index writes to complete
         
         assertEquals(PrepareSites.DEFAULT_SITES_COUNT, siteDataService.countSites(null, DataCreationState.NotScheduled));
         assertEquals(PrepareSites.DEFAULT_SITES_COUNT, siteDataService.countSiteMembers(null, DataCreationState.NotScheduled));
@@ -107,7 +105,7 @@ public class EventProcessorsTest
     }
     
     @Test
-    public synchronized void prepareSiteMembersNoSites() throws Exception
+    public void prepareSiteMembersNoSites() throws Exception
     {
         StopWatch stopWatch = new StopWatch();
         PrepareSiteMembers processor = new PrepareSiteMembers(userDataService, siteDataService);
@@ -117,7 +115,7 @@ public class EventProcessorsTest
     }
     
     @Test
-    public synchronized void prepareSiteMembersWithSites() throws Exception
+    public void prepareSiteMembersWithSites() throws Exception
     {
         prepareSites();
         
@@ -125,8 +123,6 @@ public class EventProcessorsTest
         PrepareSiteMembers processor = new PrepareSiteMembers(userDataService, siteDataService);
         EventResult result = processor.processEvent(null, stopWatch);
         assertEquals(1, result.getNextEvents().size());
-        
-        this.wait(500L);        // Allow index writes to complete
         
         long siteMemberCount = siteDataService.countSiteMembers(null, DataCreationState.NotScheduled);
         assertEquals("Unscheduled site member count incorrect. ", 1100L, siteMemberCount);
@@ -137,14 +133,12 @@ public class EventProcessorsTest
     }
     
     @Test
-    public synchronized void prepareRM() throws Exception
+    public void prepareRM() throws Exception
     {
         StopWatch stopWatch = new StopWatch();
         PrepareRM processor = new PrepareRM(userDataService, siteDataService, true, "bob", "secret");
         EventResult result = processor.processEvent(null, stopWatch);
         assertEquals(1, result.getNextEvents().size());
-        
-        this.wait(500L);        // Allow index writes to complete
         
         // Check RM admin user
         assertNotNull(userDataService.findUserByUsername("bob"));
@@ -159,7 +153,7 @@ public class EventProcessorsTest
     }
     
     @Test
-    public synchronized void prepareRMRoles() throws Exception
+    public void prepareRMRoles() throws Exception
     {
         // Should be no scheduled creations
         assertEquals(0L, siteDataService.countSiteMembers(PrepareRM.RM_SITE_ID, null));
@@ -169,14 +163,13 @@ public class EventProcessorsTest
         PrepareRMRoles processor = new PrepareRMRoles(userDataService, siteDataService);
         EventResult result = processor.processEvent(null, stopWatch);
 
-        this.wait(500L);        // Allow index writes to complete
-        
-        assertEquals(PrepareRMRoles.DEFAULT_USER_COUNT + 1, result.getNextEvents().size());
+        assertEquals("The RM role already existed, so there must be 50 events", PrepareRMRoles.DEFAULT_USER_COUNT, result.getNextEvents().size());
         Event eventOne = result.getNextEvents().get(0);
         Event eventTwo = result.getNextEvents().get(1);
         assertEquals(PrepareRMRoles.DEFAULT_ASSIGNMENT_DELAY, eventTwo.getScheduledTime() - eventOne.getScheduledTime());
 
         // All users should be scheduled for assignment
-        assertEquals(PrepareRMRoles.DEFAULT_USER_COUNT, siteDataService.countSiteMembers(PrepareRM.RM_SITE_ID, DataCreationState.Scheduled));
+        assertEquals("The RM admin would not need scheduling. ",
+                PrepareRMRoles.DEFAULT_USER_COUNT - 1, siteDataService.countSiteMembers(PrepareRM.RM_SITE_ID, DataCreationState.Scheduled));
     }
 }
