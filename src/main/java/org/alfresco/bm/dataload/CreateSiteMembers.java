@@ -118,15 +118,15 @@ public class CreateSiteMembers extends AbstractEventProcessor
             long nextEventTime = System.currentTimeMillis();
             for (SiteMemberData siteMember : pendingSiteMembers)
             {
-                nextEventTime += memberCreationDelay;
                 // Do we need to schedule it?
                 String siteId = siteMember.getSiteId();
+                String username = siteMember.getUsername();
                 SiteData site = siteDataService.getSite(siteId);
-                boolean siteCreated = site.getCreationState() == DataCreationState.Created;
                 
                 String siteManager = null;
                 List<SiteMemberData> siteManagers = siteDataService.getSiteMembers(
-                        siteId, DataCreationState.Created,
+                        siteId,
+                        (DataCreationState) null,
                         SiteRole.SiteManager.toString(),
                         0, 1);
                 if (siteManagers.size() > 0)
@@ -134,14 +134,16 @@ public class CreateSiteMembers extends AbstractEventProcessor
                     siteManager = siteManagers.get(0).getUsername();
                 }
 
-                // Ignore sites that have not been initialized or created
-                if (site == null || siteManager == null || !siteCreated)
+                // Ignore sites that have not been prepared.  Neither the site nor the manager need to exist, yet.
+                if (site == null || siteManager == null)
                 {
-                    // Ignore it
+                    // This site member cannot be created, so we mark it as an immediate failure
+                    siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Failed);
                     continue;
                 }
+                // Created sites 
                 
-                String username = siteMember.getUsername();
+                nextEventTime += memberCreationDelay;
 
                 DBObject dataObj = new BasicDBObject()
                     .append(CreateSiteMember.FIELD_SITE_ID, siteId)

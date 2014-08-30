@@ -19,17 +19,24 @@
 package org.alfresco.bm;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
+import java.util.List;
 import java.util.Properties;
 
 import org.alfresco.bm.data.DataCreationState;
+import org.alfresco.bm.dataload.CreateSiteMembers;
+import org.alfresco.bm.dataload.CreateSites;
+import org.alfresco.bm.event.ResultService;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteDataServiceImpl;
+import org.alfresco.bm.test.TestRunServicesCache;
 import org.alfresco.bm.tools.BMTestRunner;
 import org.alfresco.bm.tools.BMTestRunnerListenerAdaptor;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
 import org.alfresco.bm.user.UserDataServiceImpl;
+import org.alfresco.mongo.MongoDBFactory;
 import org.alfresco.mongo.MongoDBForTestsFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -39,6 +46,7 @@ import org.junit.runners.JUnit4;
 import org.springframework.context.ApplicationContext;
 
 import com.mongodb.DB;
+import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 
 /**
@@ -54,34 +62,45 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
     private MongoDBForTestsFactory mongoDBForTestsFactory;
     private DB db;
     private String uriWithoutDB;
-    private String mongoTestHost;
+    private String mongoHost;
     private String usersCollection;
     private String sitesCollection;
     private String siteMembersCollection;
-    private UserDataService userDataService;
+    private UserDataServiceImpl userDataService;
     private SiteDataService siteDataService;
     
     @Before
     public void setUpDB() throws Exception
     {
         mongoDBForTestsFactory = new MongoDBForTestsFactory();
-        db = mongoDBForTestsFactory.getObject();
         uriWithoutDB = mongoDBForTestsFactory.getMongoURIWithoutDB();
-        mongoTestHost = new MongoClientURI(uriWithoutDB).getHosts().get(0);
+        mongoHost = new MongoClientURI(uriWithoutDB).getHosts().get(0);
+        
+        // Connect to the test DB
+        db = new MongoDBFactory(new MongoClient(mongoHost), "bm20-data").getObject();
         
         usersCollection = "mirror.test.users";
         sitesCollection = "mirror.test.sites";
         siteMembersCollection = "mirror.test.siteMembers";
         
         userDataService = new UserDataServiceImpl(db, usersCollection);
+        userDataService.afterPropertiesSet();
         siteDataService = new SiteDataServiceImpl(db, sitesCollection, siteMembersCollection);
         // Create some users
-        for (int i = 0; i < 10; i++)
+        createSomeUsers(userDataService, 10, 10);
+    }
+    
+    /**
+     * Helper method to create some users in the created state
+     */
+    public static void createSomeUsers(UserDataService userDataService, int domains, int usersPerDomain)
+    {
+        for (int i = 0; i < domains; i++)
         {
-            String domain = String.format("D%2d", i);
-            for (int j = 0; j < 100; j++)
+            String domain = String.format("D%02d", i);
+            for (int j = 0; j < usersPerDomain; j++)
             {
-                String username = String.format("U%3d", j);
+                String username = String.format("U%03d@%s", j, domain);
                 UserData user = new UserData();
                 user.setCreationState(DataCreationState.Created);
                 user.setDomain(domain);
@@ -108,23 +127,39 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
         props.setProperty("mirror.users", usersCollection);
         props.setProperty("mirror.sites", sitesCollection);
         props.setProperty("mirror.siteMembers", siteMembersCollection);
+        props.setProperty("rm.enabled", "true");
+        props.setProperty("load.sitesCount", "10");
+        props.setProperty("load.usersPerSite", "10");
         
-        BMTestRunner testRunner = new BMTestRunner(60000L);
+        BMTestRunner testRunner = new BMTestRunner(3000000L);
         testRunner.addListener(this);
-        testRunner.run(null, mongoTestHost, props);
+        testRunner.run(mongoHost, null, props);
     }
 
     @Override
-    public void testRunStarted(ApplicationContext testCtx, String test, String run)
+    public synchronized void testRunFinished(ApplicationContext testCtx, String test, String run)
     {
-        assertEquals(1000L, userDataService.countUsers(null, DataCreationState.Created));
-    }
-
-    @Override
-    public void testRunFinished(ApplicationContext testCtx, String test, String run)
-    {
-        // Expect 10 sites per domain
-        assertEquals(100L, siteDataService.countSites(null, null));
-        assertEquals(10L, siteDataService.countSites("D01", DataCreationState.Failed));
+        // A slight pause is required here so that MongoDB will return the most up to date counts
+        try { this.wait(500L); } catch (Exception e) {}
+        
+        TestRunServicesCache services = testCtx.getBean(TestRunServicesCache.class);
+        ResultService resultService = services.getResultService(test, run);
+        
+        List<String> eventNames = resultService.getEventNames();
+        assertEquals(13, eventNames.size());
+        
+        assertEquals("Expected 100 users + RM. ", 101L, userDataService.countUsers(null, DataCreationState.Created));
+        assertEquals("Expected 10 sites + RM. ", 11L, siteDataService.countSites(null, null));
+        assertEquals("Expected 10 users / site in 10 sites, including a manager and 51 RM users. ", 161L, siteDataService.countSiteMembers(null, null));
+        assertEquals("All site members should be failures except the RM admin. ", 160L, siteDataService.countSiteMembers(null, DataCreationState.Failed));
+        assertEquals("Only the RM admin was considered to be created. ", 1L, siteDataService.countSiteMembers(null, DataCreationState.Created));
+        assertNotNull(siteDataService.getSite("rm"));
+        assertEquals(DataCreationState.Created, siteDataService.getSite("rm").getCreationState());
+        
+        assertEquals(10L, resultService.countResultsByEventName(CreateSites.DEFAULT_EVENT_NAME_CREATE_SITE));
+        assertEquals(100L, resultService.countResultsByEventName(CreateSiteMembers.DEFAULT_EVENT_NAME_CREATE_SITE_MEMBER));
+        assertEquals(1L, resultService.countResultsByEventName("prepareRM"));
+        assertEquals(1L, resultService.countResultsByEventName("prepareRMRoles"));
+        assertEquals(50L, resultService.countResultsByEventName("assignRMRole"));
     }
 }

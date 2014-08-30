@@ -134,7 +134,7 @@ public class PrepareRM extends AbstractEventProcessor
             rmSite.setType(RM_SITE_TYPE);
             rmSite.setCreationState(DataCreationState.Created);
             siteDataService.addSite(rmSite);
-            msg.append("   Added RM site " + RM_SITE_ID + " as created.\n");
+            msg.append("   Added RM site '" + RM_SITE_ID + "' as created.\n");
             // Record the administrator
             SiteMemberData rmAdminMember = new SiteMemberData();
             rmAdminMember.setCreationState(DataCreationState.Created);
@@ -142,7 +142,7 @@ public class PrepareRM extends AbstractEventProcessor
             rmAdminMember.setSiteId(RM_SITE_ID);
             rmAdminMember.setUsername(username);
             siteDataService.addSiteMember(rmAdminMember);
-            msg.append("   Added user " + username + " RM administrator.\n");
+            msg.append("   Added user '" + username + "' RM administrator.\n");
         }
         
         // Last event marks us as done

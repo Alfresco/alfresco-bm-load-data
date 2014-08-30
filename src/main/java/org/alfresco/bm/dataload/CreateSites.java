@@ -133,9 +133,10 @@ public class CreateSites extends AbstractEventProcessor
                 }
 
                 // Ignore sites that have not been initialized or created
-                if (site == null || siteManager == null)
+                if (siteManager == null)
                 {
-                    // Ignore it
+                    // This site will not be creatable
+                    siteDataService.setSiteCreationState(siteId, null, DataCreationState.Failed);
                     continue;
                 }
                 DBObject dataObj = new BasicDBObject()

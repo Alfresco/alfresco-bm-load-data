@@ -37,8 +37,6 @@ import org.alfresco.bm.user.UserDataService;
  * <p/>
  * The number of site members to create is driven by the number of sites and the {@link #setUsersPerSite(int) users per site}.
  * maxSites: if -1, uses all created sites in the sites collection maxMembersPerSite: must be greater than 0
- * <p/>
- * TODO: only site members from same domain as site at present.
  * 
  * @author steveglover
  * @author Derek Hulley
@@ -142,7 +140,8 @@ public class PrepareSiteMembers extends AbstractEventProcessor
                     SiteMemberData siteMember = siteDataService.getSiteMember(siteId, username);
                     if (siteMember != null)
                     {
-                        // The user is already a set to be a site member, so nothing to do
+                        // The user is already a set to be a site member (we could hit site manager)
+                        i--;            // Don't count this one
                         continue;
                     }
                     // Create the membership

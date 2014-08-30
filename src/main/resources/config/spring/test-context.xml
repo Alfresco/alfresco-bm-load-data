@@ -63,17 +63,15 @@
     <bean id="event.prepareSites" class="org.alfresco.bm.dataload.PrepareSites" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
-        <property name="sitesPerDomain" value="${load.sitesPerDomain}" />
-        <property name="chart" value="false"/>
-    </bean>
-    
-    <bean id="event.sitesPrepared" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
-        <constructor-arg name="outputEventName" value="createSites" />
+        <property name="sitesCount" value="${load.sitesCount}" />
+        <property name="eventNameSitesPrepared" value="createSites" />
         <property name="chart" value="false"/>
     </bean>
     
     <bean id="event.createSites" class="org.alfresco.bm.dataload.CreateSites" parent="event.base" >
         <constructor-arg name="siteDataService" ref="siteDataService" />
+        <property name="siteCreationDelay" value="${load.siteCreationDelay}" />
+        <property name="batchSize" value="${load.batch.size}" />
         <property name="chart" value="false"/>
     </bean>
     
@@ -103,6 +101,9 @@
 
     <bean id="event.createSiteMembers" class="org.alfresco.bm.dataload.CreateSiteMembers" parent="event.base" >
         <constructor-arg name="siteDataService" ref="siteDataService"/>
+        <property name="memberCreationDelay" value="${load.siteMemberCreationDelay}" />
+        <property name="batchSize" value="${load.batch.size}" />
+        <property name="eventNameSiteMembersCreated" value="prepareRM" />
         <property name="chart" value="false"/>
     </bean>
 
@@ -116,11 +117,6 @@
         <property name="chart" value="false"/>
     </bean>
     
-    <bean id="event.siteMembersCreated" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
-        <constructor-arg name="outputEventName" value="prepareRM" />
-        <property name="chart" value="false"/>
-    </bean>
-
     <bean id="event.prepareRM" class="org.alfresco.bm.dataload.rm.PrepareRM" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
@@ -128,13 +124,7 @@
         <constructor-arg name="username" value="${rm.username}" />
         <constructor-arg name="password" value="${rm.password}" />
         <property name="chart" value="false"/>
-        <property name="eventNameRMPrepared" value="createRMSite"/>
-    </bean>
-    
-    <bean id="event.createRMSite" class="org.alfresco.bm.dataload.CreateSite" parent="event.base">
-        <constructor-arg index="0" name="siteDataService" ref="siteDataService"/>
-        <constructor-arg index="1" name="publicApiFactory" ref="publicApiFactory"/>
-        <property name="eventNameSiteCreated" value="prepareRMRoles"/>
+        <property name="eventNameRMPrepared" value="prepareRMRoles"/>
     </bean>
     
     <bean id="event.prepareRMRoles" class="org.alfresco.bm.dataload.rm.PrepareRMRoles" parent="event.base" >

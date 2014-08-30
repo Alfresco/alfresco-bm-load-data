@@ -53,7 +53,7 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
     public static final String FIELD_USERNAME = "username";
     
     public static final String EVENT_NAME_ASSIGN_RM_ROLES = "rmRoleAssigned";
-    private static final String CREATE_RM_SITE_URL = "/alfresco/service/api/rm/roles/%s/authorities/%s";
+    private static final String CREATE_RM_ROLE_URL = "/alfresco/service/api/rm/roles/%s/authorities/%s";
     private SiteDataService siteDataService;
 
     /**
@@ -85,7 +85,10 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
             logger.trace(String.format("Assign role %s to user %s", role, username));
         }
 
-        HttpPost assignRoleRequest = new HttpPost(getFullUrlForPath(String.format(CREATE_RM_SITE_URL, role, username)));
+        // Assume failure in order to cover all eventualities
+        siteDataService.setSiteMemberCreationState(PrepareRM.RM_SITE_ID, username, DataCreationState.Failed);
+
+        HttpPost assignRoleRequest = new HttpPost(getFullUrlForPath(String.format(CREATE_RM_ROLE_URL, role, username)));
         HttpResponse httpResponse = executeHttpMethodAsAdmin(
                 assignRoleRequest,
                 SimpleHttpRequestCallback.getInstance());
@@ -94,7 +97,6 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
         // Expecting "OK" status
         if (httpStatus.getStatusCode() != HttpStatus.SC_OK)
         {
-            siteDataService.setSiteMemberCreationState(PrepareRM.RM_SITE_ID, username, DataCreationState.Failed);
             if (httpStatus.getStatusCode() == HttpStatus.SC_CONFLICT )
             {
                 // site already exist

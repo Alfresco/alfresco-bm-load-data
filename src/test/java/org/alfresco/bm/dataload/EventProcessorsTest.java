@@ -20,10 +20,10 @@ package org.alfresco.bm.dataload;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.alfresco.bm.BMDataLoadTest;
 import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.dataload.rm.PrepareRM;
 import org.alfresco.bm.dataload.rm.PrepareRMRoles;
@@ -34,7 +34,6 @@ import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataServiceImpl;
 import org.alfresco.bm.site.SiteMemberData;
 import org.alfresco.bm.site.SiteRole;
-import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataServiceImpl;
 import org.alfresco.mongo.MongoDBForTestsFactory;
 import org.apache.commons.lang3.time.StopWatch;
@@ -71,23 +70,7 @@ public class EventProcessorsTest
         siteDataService.afterPropertiesSet();
         
         // Create a bunch of users
-        for (int i = 0; i < 1000; i++)
-        {
-            String domain = "Domain-" + (int)(Math.random() * 10) + ".com";
-            String firstName = String.format("FISTNAME-%3d", i);
-            String lastName = String.format("LASTNAME-%3d", i);
-            String username = firstName + "." + lastName + "@" + domain;
-            String email = username;
-            UserData user = new UserData();
-            user.setCreationState(DataCreationState.Created);
-            user.setDomain(domain);
-            user.setUsername(username);
-            user.setEmail(email);
-            user.setFirstName(firstName);
-            user.setLastName(lastName);
-            user.setPassword(username);
-            userDataService.createNewUser(user);
-        }
+        BMDataLoadTest.createSomeUsers(userDataService, 10, 20);
     }
     
     @After
@@ -99,7 +82,7 @@ public class EventProcessorsTest
     @Test
     public void startState()
     {
-        assertEquals(1000, userDataService.countUsers(null, DataCreationState.Created));
+        assertEquals(200, userDataService.countUsers(null, DataCreationState.Created));
         assertEquals(0, siteDataService.countSites(null, null));
         assertEquals(0, siteDataService.countSiteMembers(null, null));
     }
@@ -110,11 +93,10 @@ public class EventProcessorsTest
         StopWatch stopWatch = new StopWatch();
         PrepareSites processor = new PrepareSites(userDataService, siteDataService);
         EventResult result = processor.processEvent(null, stopWatch);
-        assertEquals("Prepared 1000 sites in 10 domains.", result.getData());
+        assertEquals("Prepared 100 sites.", result.getData());
         
-        int expectedSiteCount = PrepareSites.DEFAULT_SITES_PER_DOMAIN * 10;   // We have 10 domains by random selection
-        assertEquals(expectedSiteCount, siteDataService.countSites(null, DataCreationState.NotScheduled));
-        assertEquals(expectedSiteCount, siteDataService.countSiteMembers(null, DataCreationState.NotScheduled));
+        assertEquals(PrepareSites.DEFAULT_SITES_COUNT, siteDataService.countSites(null, DataCreationState.NotScheduled));
+        assertEquals(PrepareSites.DEFAULT_SITES_COUNT, siteDataService.countSiteMembers(null, DataCreationState.NotScheduled));
         SiteData site = siteDataService.randomSite(null, DataCreationState.NotScheduled);
         assertNotNull(site);
         String siteId = site.getSiteId();
@@ -143,7 +125,7 @@ public class EventProcessorsTest
         assertEquals(1, result.getNextEvents().size());
         
         long siteMemberCount = siteDataService.countSiteMembers(null, DataCreationState.NotScheduled);
-        assertTrue("SiteMemberCount was " + siteMemberCount, siteMemberCount > 9000L);
+        assertEquals("Unscheduled site member count incorrect. ", 1100L, siteMemberCount);
         SiteMemberData member = siteDataService.randomSiteMember(
                 null, DataCreationState.NotScheduled, null,
                 SiteRole.SiteCollaborator.toString());

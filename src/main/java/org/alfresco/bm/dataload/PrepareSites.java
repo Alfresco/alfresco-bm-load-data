@@ -19,7 +19,6 @@
 package org.alfresco.bm.dataload;
 
 import java.util.Collections;
-import java.util.Iterator;
 
 import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.event.AbstractEventProcessor;
@@ -44,12 +43,12 @@ import org.alfresco.bm.user.UserDataService;
 public class PrepareSites extends AbstractEventProcessor
 {
     public static final String EVENT_NAME_SITES_PREPARED = "sitesPrepared";
-    public static final int DEFAULT_SITES_PER_DOMAIN = 100;
+    public static final int DEFAULT_SITES_COUNT = 100;
 
     private UserDataService userDataService;
     private SiteDataService siteDataService;
     private String eventNameSitesPrepared;
-    private int sitesPerDomain;
+    private int sitesCount;
 
     /**
      * @param services              data collections
@@ -60,12 +59,15 @@ public class PrepareSites extends AbstractEventProcessor
         this.userDataService = userDataService;
         this.siteDataService = siteDataService; 
         this.eventNameSitesPrepared = EVENT_NAME_SITES_PREPARED;
-        this.sitesPerDomain = DEFAULT_SITES_PER_DOMAIN;
+        this.sitesCount = DEFAULT_SITES_COUNT;
     }
 
-    public void setSitesPerDomain(int sitesPerDomain)
+    /**
+     * The number of sites that need to be created
+     */
+    public void setSitesCount(int sitesCount)
     {
-        this.sitesPerDomain = sitesPerDomain;
+        this.sitesCount = sitesCount;
     }
 
     /**
@@ -76,59 +78,55 @@ public class PrepareSites extends AbstractEventProcessor
         this.eventNameSitesPrepared = eventNameSitesPrepared;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
-        int sitesCount = 0;
-        int domainsCount = 0;
-
-        Iterator domains = userDataService.getDomainsIterator();
-        
-        while (domains.hasNext())
+        int preparedCount = 0;
+        for (int siteCount = 0; siteCount < sitesCount; siteCount++)
         {
-            domainsCount++;
-            final String domain = (String) domains.next();
-            for (int siteCount = 0; siteCount < sitesPerDomain; siteCount++)
+            // First choose a random user to be the creator / manager for the site
+            UserData user = userDataService.getRandomUser();
+            if (user == null)
             {
-                String siteId = String.format("Site.%s.%05d", domain, siteCount);
-                SiteData site = siteDataService.getSite(siteId);
-                if (site != null)
-                {
-                    // Site already exists
-                    continue;
-                }
-
-                // Choose a user that will be the manager
-                UserData userData = userDataService.getRandomUserFromDomain(domain);
-                String username = userData.getUsername();
-                // Create data
-                final SiteData newSite = new SiteData();
-                newSite.setDescription("");
-                newSite.setSiteId(siteId);
-                newSite.setSitePreset("preset");
-                newSite.setTitle(siteId);
-                newSite.setVisibility(SiteVisibility.getRandomVisibility());
-                newSite.setType("{http://www.alfresco.org/model/site/1.0}site");
-                newSite.setDomain(domain);
-                newSite.setCreationState(DataCreationState.NotScheduled);
-
-                // Persist
-                siteDataService.addSite(newSite);
-                sitesCount++;
-                
-                // Record the user as the site manager
-                final SiteMemberData siteMember = new SiteMemberData();
-                siteMember.setUsername(username);
-                siteMember.setSiteId(siteId);
-                siteMember.setRole(SiteRole.SiteManager.toString());
-                siteMember.setCreationState(DataCreationState.NotScheduled);
-                siteDataService.addSiteMember(siteMember);
+                return new EventResult("No random user found to be site manager.", false);
             }
+            String username = user.getUsername();
+            String domain = user.getDomain();
+            
+            String siteId = String.format("Site.%s.%05d", domain, siteCount);
+            SiteData site = siteDataService.getSite(siteId);
+            if (site != null)
+            {
+                // Site already exists
+                continue;
+            }
+
+            // Create data
+            final SiteData newSite = new SiteData();
+            newSite.setDescription("");
+            newSite.setSiteId(siteId);
+            newSite.setSitePreset("preset");
+            newSite.setTitle(siteId);
+            newSite.setVisibility(SiteVisibility.getRandomVisibility());
+            newSite.setType("{http://www.alfresco.org/model/site/1.0}site");
+            newSite.setDomain(domain);
+            newSite.setCreationState(DataCreationState.NotScheduled);
+
+            // Persist
+            siteDataService.addSite(newSite);
+            preparedCount++;
+            
+            // Record the user as the site manager
+            final SiteMemberData siteMember = new SiteMemberData();
+            siteMember.setUsername(username);
+            siteMember.setSiteId(siteId);
+            siteMember.setRole(SiteRole.SiteManager.toString());
+            siteMember.setCreationState(DataCreationState.NotScheduled);
+            siteDataService.addSiteMember(siteMember);
         }
 
         // We need an event to mark completion
-        String msg = "Prepared " + sitesCount + " sites in " + domainsCount + " domains.";
+        String msg = "Prepared " + preparedCount + " sites.";
         Event outputEvent = new Event(eventNameSitesPrepared, 0L, msg);
 
         // Create result

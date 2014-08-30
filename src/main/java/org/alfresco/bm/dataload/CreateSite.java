@@ -28,7 +28,6 @@ import org.alfresco.bm.site.SiteDataService;
 import org.springframework.social.alfresco.api.Alfresco;
 import org.springframework.social.alfresco.api.entities.LegacySite;
 import org.springframework.social.alfresco.api.entities.Site.Visibility;
-import org.springframework.social.alfresco.connect.exception.AlfrescoException;
 
 import com.mongodb.DBObject;
 
@@ -77,6 +76,10 @@ public class CreateSite extends AbstractEventProcessor
         String siteId = (String) dataObj.get(FIELD_SITE_ID);
         String siteManager = (String) dataObj.get(FIELD_SITE_MANAGER);
         
+        // Start by marking them as failures in order to handle all eventualities
+        siteDataService.setSiteCreationState(siteId, null, DataCreationState.Failed);
+        siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Failed);
+
         if (siteId == null || siteManager == null)
         {
             return new EventResult("Requests data not complete for site creation: " + dataObj, false);
@@ -110,11 +113,9 @@ public class CreateSite extends AbstractEventProcessor
             msg = "Created site: " + siteId;
             event = new Event(eventNameSiteCreated, null);
         }
-        catch (AlfrescoException e)
+        catch (Exception e)
         {
             // The creation failed
-            siteDataService.setSiteCreationState(siteId, null, DataCreationState.Failed);
-            siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Failed);
             String errMsg = e.getMessage();
             if (errMsg.indexOf("error.duplicateShortName") != -1)
             {
