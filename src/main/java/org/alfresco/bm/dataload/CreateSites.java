@@ -104,7 +104,7 @@ public class CreateSites extends AbstractEventProcessor
         List<Event> nextEvents = new ArrayList<Event>();
         
         // Schedule events for each site member to be created
-        int numSitesMembers = 0;
+        int numSites = 0;
 
         List<SiteData> pendingSites = siteDataService.getSites(null, DataCreationState.NotScheduled, 0, batchSize);
         if (pendingSites.size() == 0)
@@ -144,7 +144,7 @@ public class CreateSites extends AbstractEventProcessor
                     .append(CreateSite.FIELD_SITE_MANAGER, siteManager);
                 Event nextEvent = new Event(eventNameCreateSite, nextEventTime, dataObj);
                 nextEvents.add(nextEvent);
-                numSitesMembers++;
+                numSites++;
                 
                 // The site creation is now scheduled
                 siteDataService.setSiteCreationState(siteId, null, DataCreationState.Scheduled);
@@ -157,6 +157,6 @@ public class CreateSites extends AbstractEventProcessor
         }
 
         // Return messages + next events
-        return new EventResult("Scheduled " + numSitesMembers + " site member(s) for creation", nextEvents);
+        return new EventResult("Scheduled " + numSites + " site(s) for creation", nextEvents);
     }
 }

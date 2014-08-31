@@ -76,10 +76,6 @@ public class CreateSite extends AbstractEventProcessor
         String siteId = (String) dataObj.get(FIELD_SITE_ID);
         String siteManager = (String) dataObj.get(FIELD_SITE_MANAGER);
         
-        // Start by marking them as failures in order to handle all eventualities
-        siteDataService.setSiteCreationState(siteId, null, DataCreationState.Failed);
-        siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Failed);
-
         if (siteId == null || siteManager == null)
         {
             return new EventResult("Requests data not complete for site creation: " + dataObj, false);
@@ -94,6 +90,10 @@ public class CreateSite extends AbstractEventProcessor
         {
             return new EventResult("Site state has changed: " + site, false);
         }
+
+        // Start by marking them as failures in order to handle all eventualities
+        siteDataService.setSiteCreationState(siteId, null, DataCreationState.Failed);
+        siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Failed);
 
         String msg = null;
         try

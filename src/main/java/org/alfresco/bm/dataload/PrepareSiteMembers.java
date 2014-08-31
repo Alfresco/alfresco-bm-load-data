@@ -158,7 +158,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
 
         // We need an event to mark completion
         String msg = "Prepared " + membersCount + " site members";
-        Event outputEvent = new Event(eventNameSiteMembersPrepared, msg);
+        Event outputEvent = new Event(eventNameSiteMembersPrepared, null);
 
         // Create result
         EventResult result = new EventResult(msg, Collections.singletonList(outputEvent));

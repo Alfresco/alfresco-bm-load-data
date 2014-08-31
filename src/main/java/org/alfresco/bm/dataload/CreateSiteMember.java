@@ -91,9 +91,6 @@ public class CreateSiteMember extends AbstractEventProcessor
         String siteId = (String) dataObj.get(FIELD_SITE_ID);
         String username = (String) dataObj.get(FIELD_USERNAME);
 
-        // Start by marking it as a failure in order to handle all failure paths
-        siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Failed);
-
         EventProcessorResponse response = null;
 
         Event nextEvent = null;
@@ -115,6 +112,10 @@ public class CreateSiteMember extends AbstractEventProcessor
         {
             return new EventResult("Site membership has already been processed: " + siteMember, false);
         }
+
+        // Start by marking it as a failure in order to handle all failure paths
+        siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Failed);
+
         String roleStr = siteMember.getRole();
         Role role = Role.valueOf(roleStr);
         
