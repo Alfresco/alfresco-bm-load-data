@@ -99,18 +99,21 @@ public class CreateSiteMember extends AbstractEventProcessor
         // Check the input
         if (siteId == null || username == null)
         {
-             return new EventResult("Invalid site member request: " + dataObj, false);
+            dataObj.put("msg", "Invalid site member request.");
+            return new EventResult(dataObj, false);
         }
         
         // Get the membership data
         SiteMemberData siteMember = siteDataService.getSiteMember(siteId, username);
         if (siteMember == null)
         {
-            return new EventResult("Site membership is missing: " + dataObj, false);
+            dataObj.put("msg", "Site member is missing: " + username);
+            return new EventResult(dataObj, false);
         }
         if (siteMember.getCreationState() != DataCreationState.Scheduled)
         {
-            return new EventResult("Site membership has already been processed: " + siteMember, false);
+            dataObj.put("msg", "Site membership has already been processed: " + siteMember);
+            return new EventResult(dataObj, false);
         }
 
         // Start by marking it as a failure in order to handle all failure paths
@@ -125,13 +128,15 @@ public class CreateSiteMember extends AbstractEventProcessor
                 SiteRole.SiteManager.toString());
         if (siteManager == null)
         {
-            return new EventResult("Site does not have a manager: " + dataObj, false);
+            dataObj.put("msg", "Site does not have a manager: " + siteId);
+            return new EventResult(dataObj, false);
         }
         String runAs = siteManager.getUsername();
         UserData runAsData = userDataService.findUserByUsername(runAs);
         if (runAsData == null)
         {
-            return new EventResult("Site manager does not have a user entry: " + runAs, false);
+            dataObj.put("msg", "Site manager does not have a user entry: " + runAs);
+            return new EventResult(dataObj, false);
         }
         String runAsDomain = runAsData.getDomain();
 
@@ -164,7 +169,7 @@ public class CreateSiteMember extends AbstractEventProcessor
             else
             {
                 // Failure
-                return new EventResult("Create site member failed: " + e.getMessage(), false);
+                throw new RuntimeException("Create site member failed: " + siteMember, e);
             }
         }
 

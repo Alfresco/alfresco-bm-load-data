@@ -77,9 +77,9 @@ public class PrepareSiteMembers extends AbstractEventProcessor
      */
     public void setUsersPerSite(int usersPerSite)
     {
-        if (usersPerSite < 1)
+        if (usersPerSite < 0)
         {
-            throw new IllegalArgumentException("sitesPerUser must be greater than 0");
+            throw new IllegalArgumentException("'usersPerSite' must be zero or greater");
         }
         this.usersPerSite = usersPerSite;
     }
