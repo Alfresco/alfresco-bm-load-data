@@ -25,8 +25,6 @@ import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.publicapi.factory.PublicApiFactory;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
-import org.alfresco.bm.site.SiteMemberData;
-import org.alfresco.bm.site.SiteRole;
 import org.springframework.social.alfresco.api.Alfresco;
 import org.springframework.social.alfresco.api.entities.LegacySite;
 import org.springframework.social.alfresco.api.entities.Site.Visibility;
@@ -76,9 +74,9 @@ public class CreateSite extends AbstractEventProcessor
     {
         DBObject dataObj = (DBObject) event.getDataObject();
         String siteId = (String) dataObj.get(FIELD_SITE_ID);
-        String manager = (String) dataObj.get(FIELD_SITE_MANAGER);
+        String siteManager = (String) dataObj.get(FIELD_SITE_MANAGER);
         
-        if (siteId == null || manager == null)
+        if (siteId == null || siteManager == null)
         {
             return new EventResult("Requests data not complete for site creation: " + dataObj, false);
         }
@@ -95,16 +93,12 @@ public class CreateSite extends AbstractEventProcessor
 
         // Start by marking them as failures in order to handle all eventualities
         siteDataService.setSiteCreationState(siteId, null, DataCreationState.Failed);
-        SiteMemberData siteManager = new SiteMemberData();
-        siteManager.setRole(SiteRole.SiteManager.toString());
-        siteManager.setSiteId(site.getSiteId());
-        siteManager.setUsername(manager);
-        siteDataService.addSiteMember(siteManager);
+        siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Failed);
 
         String msg = null;
         try
         {
-            Alfresco publicApi = getPublicApi(manager);
+            Alfresco publicApi = getPublicApi(siteManager);
             LegacySite ret = publicApi.createSite(
                     site.getDomain(), siteId, site.getSitePreset(), site.getTitle(),
                     site.getDescription(), Visibility.valueOf(site.getVisibility().toString()));
@@ -114,7 +108,7 @@ public class CreateSite extends AbstractEventProcessor
             // Create site has succeeded.  Mark the site.
             String guid = ret.getNode();
             siteDataService.setSiteCreationState(siteId, guid, DataCreationState.Created);
-            siteDataService.setSiteMemberCreationState(siteId, manager, DataCreationState.Created);
+            siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Created);
 
             msg = "Created site: " + siteId;
             event = new Event(eventNameSiteCreated, null);
