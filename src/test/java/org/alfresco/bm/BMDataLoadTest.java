@@ -151,7 +151,7 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
         assertEquals("Expected 100 users + RM. ", 101L, userDataService.countUsers(null, DataCreationState.Created));
         assertEquals("Expected 10 sites + RM. ", 11L, siteDataService.countSites(null, null));
         assertEquals("Expected 10 users / site in 10 sites, including a manager and 50 RM users. ", 160L, siteDataService.countSiteMembers(null, null));
-        assertEquals("All site members should be failures except the RM admin. ", 159L, siteDataService.countSiteMembers(null, DataCreationState.Failed));
+        assertEquals("All site members should be failures except the RM admin. ", 149L, siteDataService.countSiteMembers(null, DataCreationState.Failed));
         assertEquals("Only the RM admin was considered to be created. ", 1L, siteDataService.countSiteMembers(null, DataCreationState.Created));
         assertNotNull(siteDataService.getSite("rm"));
         assertEquals(DataCreationState.Created, siteDataService.getSite("rm").getCreationState());
