@@ -87,7 +87,7 @@ public class CreateSiteMember extends AbstractEventProcessor
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
-        DBObject dataObj = (DBObject) event.getDataObject();
+        DBObject dataObj = (DBObject) event.getData();
         String siteId = (String) dataObj.get(FIELD_SITE_ID);
         String username = (String) dataObj.get(FIELD_USERNAME);
 
@@ -139,10 +139,15 @@ public class CreateSiteMember extends AbstractEventProcessor
             return new EventResult(dataObj, false);
         }
         String runAsDomain = runAsData.getDomain();
+        if(UserDataService.DEFAULT_DOMAIN.equalsIgnoreCase(runAsDomain))
+        {
+            runAsDomain = String.format("-%s-", runAsDomain);
+        }
 
         try
         {
-            getPublicApi(runAs).addMember(runAsDomain, siteId, username, role);
+            Alfresco alfrescoAPI = getPublicApi(runAs);
+            alfrescoAPI.addMember(runAsDomain, siteId, username, role);
             siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Created);
             
             siteMember = siteDataService.getSiteMember(siteId, username);
@@ -169,7 +174,7 @@ public class CreateSiteMember extends AbstractEventProcessor
             else
             {
                 // Failure
-                throw new RuntimeException("Create site member failed: " + siteMember, e);
+                throw new RuntimeException("Create site member as user: " + runAs + " failed : " + siteMember, e);
             }
         }
 

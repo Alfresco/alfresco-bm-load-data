@@ -72,7 +72,7 @@ public class CreateSite extends AbstractEventProcessor
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
-        DBObject dataObj = (DBObject) event.getDataObject();
+        DBObject dataObj = (DBObject) event.getData();
         String siteId = (String) dataObj.get(FIELD_SITE_ID);
         String siteManager = (String) dataObj.get(FIELD_SITE_MANAGER);
         
@@ -110,7 +110,7 @@ public class CreateSite extends AbstractEventProcessor
             siteDataService.setSiteCreationState(siteId, guid, DataCreationState.Created);
             siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Created);
 
-            msg = "Created site: " + siteId;
+            msg = "Created site: " + siteId + " SiteManager: " + siteManager;
             event = new Event(eventNameSiteCreated, null);
         }
         catch (Exception e)
