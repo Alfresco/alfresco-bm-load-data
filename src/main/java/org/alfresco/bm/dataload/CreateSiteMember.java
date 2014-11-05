@@ -143,7 +143,6 @@ public class CreateSiteMember extends AbstractEventProcessor
         {
             runAsDomain = String.format("-%s-", runAsDomain);
         }
-
         try
         {
             Alfresco alfrescoAPI = getPublicApi(runAs);

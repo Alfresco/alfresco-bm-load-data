@@ -109,8 +109,9 @@ public class CreateSites extends AbstractEventProcessor
         List<SiteData> pendingSites = siteDataService.getSites(null, DataCreationState.NotScheduled, 0, batchSize);
         if (pendingSites.size() == 0)
         {
-            // There is nothing more to do
-            Event doneEvent = new Event(eventNameSitesCreated, System.currentTimeMillis(), null);
+            // There is nothing more to do, adding a pause before next event can happen to allow the last of site creation.
+            long time = System.currentTimeMillis() + 5000L;
+            Event doneEvent = new Event(eventNameSitesCreated, time, null);
             nextEvents.add(doneEvent);
         }
         else

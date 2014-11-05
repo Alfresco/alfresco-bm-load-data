@@ -91,7 +91,7 @@ public class CreateSiteMembers extends AbstractEventProcessor
     }
 
     /**
-     * Override the {@link #DEFAULT_MEMBER_CREATION_DELAY default} time between membership creatio requests
+     * Override the {@link #DEFAULT_MEMBER_CREATION_DELAY default} time between membership creation requests
      */
     public void setMemberCreationDelay(long memberCreationDelay)
     {

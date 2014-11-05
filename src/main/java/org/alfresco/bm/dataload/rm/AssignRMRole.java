@@ -72,7 +72,7 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
-        DBObject dataObj = (DBObject) event.getDataObject();
+        DBObject dataObj = (DBObject) event.getData();
         if (dataObj == null || !dataObj.containsField(FIELD_ROLE) || !dataObj.containsField(FIELD_USERNAME))
         {
             throw new IllegalStateException("Insufficient data for event: " + dataObj);

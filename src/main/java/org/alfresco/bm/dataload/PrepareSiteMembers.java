@@ -107,7 +107,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
         for (int siteLoop = 0; siteLoop < siteLoops; siteLoop++)
         {
             // Get the next page of sites
-            List<SiteData> sites = siteDataService.getSites(null, null, siteLoop * sitePageSize, sitePageSize);
+            List<SiteData> sites = siteDataService.getSites(null, DataCreationState.Created, siteLoop * sitePageSize, sitePageSize);
             for (SiteData site : sites)
             {
                 String siteId = site.getSiteId();
