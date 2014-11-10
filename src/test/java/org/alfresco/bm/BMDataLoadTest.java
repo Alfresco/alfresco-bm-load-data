@@ -112,6 +112,7 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
                 userDataService.createNewUser(user);
             }
         }
+        System.out.println("doo");
     }
     
     @After
@@ -150,14 +151,15 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
         
         assertEquals("Expected 100 users + RM. ", 101L, userDataService.countUsers(null, DataCreationState.Created));
         assertEquals("Expected 10 sites + RM. ", 11L, siteDataService.countSites(null, null));
-        assertEquals("Expected 10 users / site in 10 sites, including a manager and 50 RM users. ", 160L, siteDataService.countSiteMembers(null, null));
-        assertEquals("All site members should be failures except the RM admin. ", 159L, siteDataService.countSiteMembers(null, DataCreationState.Failed));
+        assertEquals("Expected 10 user, user per site, including a manager and 49 RM users. ", 60L, siteDataService.countSiteMembers(null, null));
+        assertEquals("All site members should be failures except the RM admin. ", 59L, siteDataService.countSiteMembers(null, DataCreationState.Failed));
         assertEquals("Only the RM admin was considered to be created. ", 1L, siteDataService.countSiteMembers(null, DataCreationState.Created));
         assertNotNull(siteDataService.getSite("rm"));
         assertEquals(DataCreationState.Created, siteDataService.getSite("rm").getCreationState());
         
         assertEquals(10L, resultService.countResultsByEventName(CreateSites.DEFAULT_EVENT_NAME_CREATE_SITE));
-        assertEquals(100L, resultService.countResultsByEventName(CreateSiteMembers.DEFAULT_EVENT_NAME_CREATE_SITE_MEMBER));
+        //No site member should be created as there are no successfully created sites.
+        assertEquals(0L, resultService.countResultsByEventName(CreateSiteMembers.DEFAULT_EVENT_NAME_CREATE_SITE_MEMBER));
         assertEquals(1L, resultService.countResultsByEventName("prepareRM"));
         assertEquals(1L, resultService.countResultsByEventName("prepareRMRoles"));
         assertEquals(49L, resultService.countResultsByEventName("assignRMRole"));

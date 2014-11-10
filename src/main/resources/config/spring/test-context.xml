@@ -103,7 +103,11 @@
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <property name="memberCreationDelay" value="${load.siteMemberCreationDelay}" />
         <property name="batchSize" value="${load.batch.size}" />
-        <property name="eventNameSiteMembersCreated" value="prepareRM" />
+        <property name="chart" value="false"/>
+    </bean>
+    
+    <bean id="event.siteMembersCreated" class="org.alfresco.bm.event.RenameEventProcessor" parent="event.base" >
+        <constructor-arg name="outputEventName" value="prepareRM" />
         <property name="chart" value="false"/>
     </bean>
 
