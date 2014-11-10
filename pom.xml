@@ -10,17 +10,29 @@
     <artifactId>alfresco-benchmark-tests-dataload</artifactId>
     <version>2.0-SNAPSHOT</version>
     <packaging>war</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <server.version>2.0.2</server.version>
+        <junit.version>4.11</junit.version>
+
+        <bm.tomcat.port>9086</bm.tomcat.port>
+        <bm.tomcat.ip>localhost</bm.tomcat.ip>
+        <bm.tomcat.url>http://${bm.tomcat.ip}:${bm.tomcat.port}/manager/text</bm.tomcat.url>
+        <bm.tomcat.server>dev-tomcat</bm.tomcat.server>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.alfresco</groupId>
             <artifactId>alfresco-benchmark-server</artifactId>
-            <version>2.0.3-SNAPSHOT</version>
+            <version>${server.version}</version>
             <classifier>classes</classifier>
         </dependency>
         <dependency>
             <groupId>org.alfresco</groupId>
             <artifactId>alfresco-benchmark-util</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>${server.version}</version>
         </dependency>
         <dependency>
             <groupId>org.alfresco</groupId>
@@ -36,14 +48,29 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.10</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <scm>
+ 
+     <scm>
         <connection>scm:svn:http://svn.alfresco.com/repos/alfresco-open-mirror/benchmark/tests/dataload/trunk</connection>
         <developerConnection>scm:svn:https://svn.alfresco.com/repos/alfresco-enterprise/benchmark/tests/dataload/trunk</developerConnection>
     </scm>
+    
+    <distributionManagement>
+        <repository>
+            <id>alfresco-internal</id>
+            <name>Alfresco Releases Repository</name>
+            <url>https://artifacts.alfresco.com/nexus/content/repositories/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>alfresco-internal-snapshots</id>
+            <name>Alfresco Snapshots Repository </name>
+            <url>https://artifacts.alfresco.com/nexus/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <build>
         <resources>
             <resource>
@@ -67,8 +94,11 @@
                 <groupId>org.apache.tomcat.maven</groupId>
                 <artifactId>tomcat7-maven-plugin</artifactId>
                 <configuration>
-                    <port>9086</port>
-                    <path>/alfresco-benchmark-tests-dataload</path>
+                    <url>${bm.tomcat.url}</url>
+                    <!-- Add the following server to your security settings -->
+                    <server>${bm.tomcat.server}</server>
+                    <port>${bm.tomcat.port}</port>
+                    <path>/${project.name}-${project.version}</path>
                 </configuration>
             </plugin>
             <plugin>
