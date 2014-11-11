@@ -125,10 +125,10 @@ public class EventProcessorsTest
         assertEquals(1, result.getNextEvents().size());
         
         long siteMemberCount = siteDataService.countSiteMembers(null, DataCreationState.NotScheduled);
-        assertEquals("Unscheduled site member count incorrect. ", 1100L, siteMemberCount);
+        assertEquals("Unscheduled site member count incorrect. ", 100L, siteMemberCount);
         SiteMemberData member = siteDataService.randomSiteMember(
                 null, DataCreationState.NotScheduled, null,
-                SiteRole.SiteCollaborator.toString());
+                SiteRole.SiteManager.toString());
         assertNotNull(member);
     }
     

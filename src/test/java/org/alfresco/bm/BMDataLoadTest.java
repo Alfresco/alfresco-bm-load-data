@@ -112,7 +112,6 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
                 userDataService.createNewUser(user);
             }
         }
-        System.out.println("doo");
     }
     
     @After
