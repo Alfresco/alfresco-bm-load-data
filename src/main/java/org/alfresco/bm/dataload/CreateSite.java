@@ -18,6 +18,8 @@
  */
 package org.alfresco.bm.dataload;
 
+import org.alfresco.bm.cm.FileFolderService;
+import org.alfresco.bm.cm.FolderData;
 import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
@@ -39,18 +41,23 @@ import com.mongodb.DBObject;
  */
 public class CreateSite extends AbstractEventProcessor
 {
+    public static final String PATH_SNIPPET_SITES = "Sites";
+    public static final String PATH_SNIPPET_DOCLIB = "documentLibrary";
+    
     public static final String FIELD_SITE_ID = "siteId";
     public static final String FIELD_SITE_MANAGER = "siteManager";
     
     public static final String DEFAULT_EVENT_NAME_SITE_CREATED = "siteCreated";
 
-    private SiteDataService siteDataService;
-    private PublicApiFactory publicApiFactory;
+    private final SiteDataService siteDataService;
+    private final FileFolderService fileFolderService;
+    private final PublicApiFactory publicApiFactory;
     private String eventNameSiteCreated = DEFAULT_EVENT_NAME_SITE_CREATED;
 
-    public CreateSite(SiteDataService siteDataService, PublicApiFactory publicApiFactory)
+    public CreateSite(SiteDataService siteDataService, FileFolderService fileFolderService, PublicApiFactory publicApiFactory)
     {
         super();
+        this.fileFolderService = fileFolderService;
         this.siteDataService = siteDataService;
         this.publicApiFactory = publicApiFactory; 
     }
@@ -103,12 +110,18 @@ public class CreateSite extends AbstractEventProcessor
                     site.getDomain(), siteId, site.getSitePreset(), site.getTitle(),
                     site.getDescription(), Visibility.valueOf(site.getVisibility().toString()));
             
-            // TODO use ret
-
             // Create site has succeeded.  Mark the site.
             String guid = ret.getNode();
             siteDataService.setSiteCreationState(siteId, guid, DataCreationState.Created);
             siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Created);
+            
+            // Create a folder reference for the document library
+            FolderData docLib = new FolderData(
+                    guid,                                   // already unique
+                    "",
+                    "/" + PATH_SNIPPET_SITES + "/" + siteId + "/" + PATH_SNIPPET_DOCLIB,
+                    0L, 0L);
+            fileFolderService.createNewFolder(docLib);
 
             msg = "Created site: " + siteId + " SiteManager: " + siteManager;
             event = new Event(eventNameSiteCreated, null);

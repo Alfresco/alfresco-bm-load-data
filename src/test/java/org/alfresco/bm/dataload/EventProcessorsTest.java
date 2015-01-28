@@ -22,14 +22,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.alfresco.bm.BMDataLoadTest;
+import org.alfresco.bm.cm.FileFolderService;
 import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.dataload.rm.PrepareRM;
 import org.alfresco.bm.dataload.rm.PrepareRMRoles;
 import org.alfresco.bm.dataload.rm.RMRole;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
+import org.alfresco.bm.session.MongoSessionService;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataServiceImpl;
 import org.alfresco.bm.site.SiteMemberData;
@@ -55,8 +58,10 @@ import com.mongodb.DB;
 public class EventProcessorsTest
 {
     private MongoDBForTestsFactory mongoFactory;
+    private MongoSessionService sessionService;
     private SiteDataServiceImpl siteDataService;
     private UserDataServiceImpl userDataService;
+    private FileFolderService fileFolderService;
     private DB db;
     
     @Before
@@ -64,10 +69,14 @@ public class EventProcessorsTest
     {
         mongoFactory = new MongoDBForTestsFactory();
         db = mongoFactory.getObject();
+        sessionService = new MongoSessionService(db, "sessions");
+        sessionService.start();
         userDataService = new UserDataServiceImpl(db, "users");
         userDataService.afterPropertiesSet();
         siteDataService = new SiteDataServiceImpl(db, "sites", "siteMembers");
         siteDataService.afterPropertiesSet();
+        fileFolderService = new FileFolderService(db, "filefolder");
+        fileFolderService.afterPropertiesSet();
         
         // Create a bunch of users
         BMDataLoadTest.createSomeUsers(userDataService, 10, 20);
@@ -85,6 +94,7 @@ public class EventProcessorsTest
         assertEquals(200, userDataService.countUsers(null, DataCreationState.Created));
         assertEquals(0, siteDataService.countSites(null, null));
         assertEquals(0, siteDataService.countSiteMembers(null, null));
+        assertEquals(0, fileFolderService.countEmptyFolders(""));
     }
     
     @Test
@@ -171,5 +181,31 @@ public class EventProcessorsTest
         // All users should be scheduled for assignment
         assertEquals("The RM admin would not need scheduling. ",
                 PrepareRMRoles.DEFAULT_USER_COUNT - 1, siteDataService.countSiteMembers(PrepareRM.RM_SITE_ID, DataCreationState.Scheduled));
+    }
+    
+    @Test
+    public void scheduleSiteLoaders() throws Exception
+    {
+        prepareSiteMembersWithSites();
+        List<SiteData> someSites = siteDataService.getSites(null, null, 0, 5);
+        for (SiteData site : someSites)
+        {
+            String siteId = site.getSiteId();
+            String docLibPath =
+                    "/" + CreateSite.PATH_SNIPPET_SITES +
+                    "/" + siteId +
+                    "/" + CreateSite.PATH_SNIPPET_DOCLIB;
+            fileFolderService.createNewFolder(UUID.randomUUID().toString(), "", docLibPath);
+        }
+        
+        StopWatch stopWatch = new StopWatch();
+        ScheduleSiteLoaders processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 100, 4, 100);
+        EventResult result = processor.processEvent(null, stopWatch);
+        assertEquals(5, result.getNextEvents().size());
+        
+        // A folder for each doblib and 4 lock folders
+        assertEquals(9, fileFolderService.countEmptyFolders(""));
+        
+        // All 4 schedule events should be focused on the file generation
     }
 }

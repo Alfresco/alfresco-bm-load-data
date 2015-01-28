@@ -52,9 +52,10 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
     public static final String FIELD_ROLE = "role";
     public static final String FIELD_USERNAME = "username";
     
-    public static final String EVENT_NAME_ASSIGN_RM_ROLES = "rmRoleAssigned";
+    public static final String EVENT_NAME_RM_ROLE_ASSIGNED = "rmRoleAssigned";
     private static final String CREATE_RM_ROLE_URL = "/alfresco/service/api/rm/roles/%s/authorities/%s";
     private SiteDataService siteDataService;
+    private String eventNameRMRoleAssigned;
 
     /**
      * @param services              data collections
@@ -67,6 +68,15 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
     {
         super(httpClientProvider, authenticationDetailsProvider, baseUrl);
         this.siteDataService = siteDataService;
+        this.eventNameRMRoleAssigned = EVENT_NAME_RM_ROLE_ASSIGNED;
+    }
+
+    /**
+     * Override the {@link #EVENT_NAME_RM_ROLE_ASSIGNED default} event name when complete
+     */
+    public void setEventNameRMRoleAssigned(String eventNameRMRoleAssigned)
+    {
+        this.eventNameRMRoleAssigned = eventNameRMRoleAssigned;
     }
 
     @Override
@@ -95,6 +105,7 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
         
         StatusLine httpStatus = httpResponse.getStatusLine();
         // Expecting "OK" status
+        Event nextEvent = new Event(eventNameRMRoleAssigned, null);
         if (httpStatus.getStatusCode() != HttpStatus.SC_OK)
         {
             if (httpStatus.getStatusCode() == HttpStatus.SC_CONFLICT )
@@ -102,7 +113,7 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
                 // site already exist
                 return new EventResult(
                         String.format("Ignoring assign rm role %s, already present in alfresco: ", role),
-                        true);
+                        nextEvent);
             }
             else
             {
@@ -120,7 +131,7 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
             siteDataService.setSiteMemberCreationState(PrepareRM.RM_SITE_ID, username, DataCreationState.Created);
             return new EventResult(
                     String.format("RM role %s assigned to user %s", role, username),
-                    true);
+                    nextEvent);
         }
     }
 }
