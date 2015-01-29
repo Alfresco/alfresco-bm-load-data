@@ -47,6 +47,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import com.mongodb.DB;
+import com.mongodb.DBObject;
 
 /**
  * @see PrepareSites
@@ -202,10 +203,17 @@ public class EventProcessorsTest
         ScheduleSiteLoaders processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 100, 4, 100);
         EventResult result = processor.processEvent(null, stopWatch);
         assertEquals(5, result.getNextEvents().size());
+        // A file loader for each folder
+        assertEquals(5, fileFolderService.countEmptyFolders(""));
+        assertEquals(Integer.valueOf(100), ((DBObject) result.getNextEvents().get(0).getData()).get(ScheduleSiteLoaders.FIELD_FILES_TO_CREATE));
+        assertEquals(Integer.valueOf(0), ((DBObject) result.getNextEvents().get(0).getData()).get(ScheduleSiteLoaders.FIELD_FOLDERS_TO_CREATE));
         
-        // A folder for each doblib and 4 lock folders
-        assertEquals(9, fileFolderService.countEmptyFolders(""));
-        
-        // All 4 schedule events should be focused on the file generation
+        stopWatch = new StopWatch();
+        processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 0, 4, 100);
+        result = processor.processEvent(null, stopWatch);
+        // A folder loader for each (unlocked) folder.  We had 4 loaders and now 1 other for the remaining unlocked folder
+        assertEquals(2, result.getNextEvents().size());
+        assertEquals(Integer.valueOf(0), ((DBObject) result.getNextEvents().get(0).getData()).get(ScheduleSiteLoaders.FIELD_FILES_TO_CREATE));
+        assertEquals(Integer.valueOf(5), ((DBObject) result.getNextEvents().get(0).getData()).get(ScheduleSiteLoaders.FIELD_FOLDERS_TO_CREATE));
     }
 }
