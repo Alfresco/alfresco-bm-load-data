@@ -90,7 +90,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
         final int sitePageSize = 500;
         int membersCount = 0;
 
-        long numSites = siteDataService.countSites(null, DataCreationState.NotScheduled);
+        long numSites = siteDataService.countSites(null, DataCreationState.Created);
         int siteLoops = ((int) (numSites / sitePageSize) + 1);           // The number of times to query for sites
         
         int userSkip = 0;
@@ -111,8 +111,11 @@ public class PrepareSiteMembers extends AbstractEventProcessor
             for (SiteData site : sites)
             {
                 String siteId = site.getSiteId();
+                // How many users do we have for the site?
+                int currentSiteUsersCount = siteDataService.getSiteMembers(siteId, DataCreationState.Created, null, 0, usersPerSite).size();
+                int siteUsersToCreate = usersPerSite - currentSiteUsersCount;
                 // Keep going while we attempt to find a user to use
-                for (int i = 0; i < usersPerSite; i++)
+                for (int i = 0; i < siteUsersToCreate; i++)
                 {
                     // Get some users
                     if (currentUser >= users.size())
