@@ -224,7 +224,7 @@
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="siteFoldersLoaded" />
     </bean>
-    <bean id="producer.siteFolderLoaded" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
+    <bean id="producer.siteFoldersLoaded" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
 
     <bean id="event.loadSiteFiles" class="org.alfresco.bm.dataload.SiteFolderLoader" parent="event.base" >
         <constructor-arg name="fileFolderService" ref="fileFolderService" />
