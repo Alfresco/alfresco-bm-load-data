@@ -124,15 +124,6 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
-        // Are there any more folders to fill?
-        long emptyFolderCount = fileFolderService.countEmptyFolders("");
-        if (emptyFolderCount == 0)
-        {
-            // There is nothing more to do
-            Event nextEvent = new Event(eventNameLoadingComplete, null);
-            return new EventResult(null, nextEvent);
-        }
-        
         // Are there still sessions active?
         long sessionCount = sessionService.getActiveSessionsCount();
         int toCreate = maxActiveLoaders - (int) sessionCount;
