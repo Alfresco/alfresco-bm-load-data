@@ -211,7 +211,13 @@ public class EventProcessorsTest
         stopWatch = new StopWatch();
         processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 0, 4, 100);
         result = processor.processEvent(null, stopWatch);
-        // A folder loader for each (unlocked) folder.  We had 4 loaders and now 1 other for the remaining unlocked folder
+        // All the sessions doing the loading are still active, so just reschedule
+        assertEquals(1, result.getNextEvents().size());
+
+        stopWatch = new StopWatch();
+        processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 0, 5, 100);
+        result = processor.processEvent(null, stopWatch);
+        // One more loader is allowed, so we have a loader and a rescheduling
         assertEquals(2, result.getNextEvents().size());
         assertEquals(Integer.valueOf(0), ((DBObject) result.getNextEvents().get(0).getData()).get(ScheduleSiteLoaders.FIELD_FILES_TO_CREATE));
         assertEquals(Integer.valueOf(5), ((DBObject) result.getNextEvents().get(0).getData()).get(ScheduleSiteLoaders.FIELD_FOLDERS_TO_CREATE));
