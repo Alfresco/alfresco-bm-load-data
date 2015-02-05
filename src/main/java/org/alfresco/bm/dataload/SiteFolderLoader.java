@@ -37,6 +37,7 @@ import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.file.TestFileService;
+import org.alfresco.bm.session.SessionService;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
@@ -104,6 +105,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
 {
     public static final String EVENT_NAME_SITE_FOLDER_LOADED = "siteFolderLoaded";
     
+    private final SessionService sessionService;
     private final FileFolderService fileFolderService;
     private final UserDataService userDataService;
     private final SiteDataService siteDataService;
@@ -114,6 +116,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
 
     /**
      * 
+     * @param sessionService                    service to close this loader's session
      * @param fileFolderService                 service to access folders
      * @param userDataService                   service to access usernames and passwords
      * @param siteDataService                   service to access site details
@@ -122,6 +125,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
      * @param cmisCtx                           the operation context for all calls made by the session.
      */
     public SiteFolderLoader(
+            SessionService sessionService,
             FileFolderService fileFolderService,
             UserDataService userDataService,
             SiteDataService siteDataService,
@@ -131,6 +135,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
     {
         super();
         
+        this.sessionService = sessionService;
         this.fileFolderService = fileFolderService;
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
@@ -174,6 +179,13 @@ public class SiteFolderLoader extends AbstractEventProcessor
         {
             throw new IllegalStateException("No such folder recorded: " + dataObj);
         }
+        // Get the session
+        String sessionId = event.getSessionId();
+        if (sessionId == null)
+        {
+            return new EventResult("Load scheduling should create a session for each loader.", false);
+        }
+        
         try
         {
             return loadFolder(
@@ -182,6 +194,8 @@ public class SiteFolderLoader extends AbstractEventProcessor
         }
         finally
         {
+            // End the session
+            sessionService.endSession(sessionId);
             // Clean up the lock
             String lockedPath = folder.getPath() + "/locked";
             fileFolderService.deleteFolder(context, lockedPath, false);

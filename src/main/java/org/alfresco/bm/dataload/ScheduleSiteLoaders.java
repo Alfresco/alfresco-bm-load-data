@@ -126,14 +126,14 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
     {
         // Are there still sessions active?
         long sessionCount = sessionService.getActiveSessionsCount();
-        int toCreate = maxActiveLoaders - (int) sessionCount;
+        int loaderSessionsToCreate = maxActiveLoaders - (int) sessionCount;
         
         List<Event> nextEvents = new ArrayList<Event>(maxActiveLoaders);
 
         int skip = 0;
         int limit = 100;
         // Find folders at the deepest level and schedule file-only loads
-        while (nextEvents.size() < toCreate)
+        while (nextEvents.size() < loaderSessionsToCreate)
         {
             // Get folders needing loading
             List<FolderData> emptyFolders = fileFolderService.getFoldersByCounts(
@@ -171,6 +171,10 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
                             .add(FIELD_FILES_TO_CREATE, Integer.valueOf(filesToCreate))
                             .get();
                     Event loadEvent = new Event(eventNameLoadSiteFiles, loadData);
+                    // Each load event must be associated with a session
+                    String sessionId = sessionService.startSession(loadData);
+                    loadEvent.setSessionId(sessionId);
+                    // Add the event to the list
                     nextEvents.add(loadEvent);
                 }
                 catch (Exception e)
@@ -179,7 +183,7 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
                     continue;
                 }
                 // Check if we have enough
-                if (nextEvents.size() >= toCreate)
+                if (nextEvents.size() >= loaderSessionsToCreate)
                 {
                     break;
                 }
@@ -189,7 +193,7 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
         skip = 0;
         limit = 100;
         // Target folders that need subfolders
-        while (nextEvents.size() < toCreate)
+        while (nextEvents.size() < loaderSessionsToCreate)
         {
             // Get folders needing loading
             List<FolderData> emptyFolders = fileFolderService.getFoldersByCounts(
@@ -227,6 +231,10 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
                             .add(FIELD_FILES_TO_CREATE, Integer.valueOf(0))
                             .get();
                     Event loadEvent = new Event(eventNameLoadSiteFolders, loadData);
+                    // Each load event must be associated with a session
+                    String sessionId = sessionService.startSession(loadData);
+                    loadEvent.setSessionId(sessionId);
+                    // Add the event to the list
                     nextEvents.add(loadEvent);
                 }
                 catch (Exception e)
@@ -235,7 +243,7 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
                     continue;
                 }
                 // Check if we have enough
-                if (nextEvents.size() >= toCreate)
+                if (nextEvents.size() >= loaderSessionsToCreate)
                 {
                     break;
                 }
@@ -244,9 +252,9 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
         
         // If there are no events, then we have finished
         String msg = null;
-        if (nextEvents.size() == 0)
+        if (loaderSessionsToCreate > 0 && nextEvents.size() == 0)
         {
-            // There are no folders to load
+            // There are no files or folders to load even though there are sessions available
             Event nextEvent = new Event(eventNameLoadingComplete, null);
             nextEvents.add(nextEvent);
             msg = "Loading completed.  Raising 'done' event.";
