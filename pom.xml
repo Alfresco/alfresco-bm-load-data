@@ -39,6 +39,16 @@
             <artifactId>alfresco-benchmark-tests-publicapi</artifactId>
             <version>${publicapi.version}</version>
             <classifier>classes</classifier>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.alfresco.services.sync</groupId>
+                    <artifactId>service-synchronization-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.seleniumhq.selenium</groupId>
+                    <artifactId>selenium-java</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>xml-apis</groupId>
