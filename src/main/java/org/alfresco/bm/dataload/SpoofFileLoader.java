@@ -142,7 +142,7 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
         
         try
         {
-            return loadFolder(folder, filesToCreate);
+            return loadFiles(folder, filesToCreate);
         }
         finally
         {
@@ -154,7 +154,7 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
         }
     }
     
-    private EventResult loadFolder(FolderData folder, int filesToCreate) throws IOException
+    private EventResult loadFiles(FolderData folder, int filesToCreate) throws IOException
     {
         UserData user = SiteFolderLoader.getUser(siteDataService, userDataService, folder, logger);
         
@@ -171,7 +171,7 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
                 .get();
         
         HttpEntity jsonEntity = new StringEntity(reqObj.toString(), ContentType.TEXT_PLAIN);
-        
+
         String url = getFullUrlForPath(URL_LOAD_FILES);
         CloseableHttpResponse httpResponse = null;
         try
@@ -180,7 +180,9 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
             HttpPost httpPost = new HttpPost(url);
             httpPost.setEntity(jsonEntity);
             // Execute
+            super.resumeTimer();
             httpResponse = (CloseableHttpResponse) httpClient.execute(httpPost);
+            super.suspendTimer();
             // TODO: Get the actual count of files created
             // Check status
             StatusLine httpStatus = httpResponse.getStatusLine();
@@ -215,7 +217,10 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
         }
         finally
         {
-            httpResponse.close();
+            if (httpResponse != null)
+            {
+                try { httpResponse.close(); } catch (Exception e) {}        // Will be closed anyway
+            }
         }
     }
 }
