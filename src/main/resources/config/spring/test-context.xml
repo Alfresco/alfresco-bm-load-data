@@ -206,9 +206,11 @@
         <constructor-arg name="filesPerFolder" value="${siteLoad.filesPerFolder}" />
         <constructor-arg name="maxActiveLoaders" value="${siteLoad.maxActiveLoaders}" />
         <constructor-arg name="loadCheckDelay" value="${siteLoad.loadCheckDelay}" />
+        <constructor-arg name="spoofSiteFiles" value="${spoof.spoofSiteFiles}"/>
         <property name="chart" value="false"/>
         <property name="eventNameLoadSiteFolders" value="loadSiteFolders" />
         <property name="eventNameLoadSiteFiles" value="loadSiteFiles" />
+        <property name="eventNameSpoofSiteFiles" value="spoofSiteFiles" />
         <property name="eventNameScheduleLoaders" value="scheduleSiteLoaders" />
         <property name="eventNameLoadingComplete" value="loadingComplete" />
     </bean>
@@ -239,5 +241,21 @@
         <property name="eventNameSiteFolderLoaded" value="siteFilesLoaded" />
     </bean>
     <bean id="producer.siteFilesLoaded" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
+
+    <bean id="event.spoofSiteFiles" class="org.alfresco.bm.dataload.SpoofFileLoader" parent="event.base" >
+        <constructor-arg name="httpClientProvider" ref="httpClientProvider" />
+        <constructor-arg name="authenticationDetailsProvider" ref="authenticationDetailsProvider" />
+        <constructor-arg name="baseUrl" value="${alfresco.url}" />
+        <constructor-arg name="sessionService" ref="sessionService"/>
+        <constructor-arg name="fileFolderService" ref="fileFolderService" />
+        <constructor-arg name="userDataService" ref="userDataService"/>
+        <constructor-arg name="siteDataService" ref="siteDataService"/>
+        <constructor-arg name="minFileSize" value="${spoof.minFileSize}"/>
+        <constructor-arg name="maxFileSize" value="${spoof.maxFileSize}"/>
+        <constructor-arg name="forceBinaryStorage" value="${spoof.forceBinaryStorage}"/>
+        <property name="chart" value="true"/>
+        <property name="eventNameSiteFilesSpoofed" value="siteFilesSpoofed" />
+    </bean>
+    <bean id="producer.siteFilesSpoofed" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
 
 </beans>

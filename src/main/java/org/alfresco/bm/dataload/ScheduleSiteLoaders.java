@@ -48,6 +48,7 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
     
     public static final String EVENT_NAME_LOAD_SITE_FOLDERS = "loadSiteFolders";
     public static final String EVENT_NAME_LOAD_SITE_FILES = "loadSiteFiles";
+    public static final String EVENT_NAME_SPOOF_SITE_FILES = "spoofSiteFiles";
     public static final String EVENT_NAME_SCHEDULE_LOADERS = "scheduleLoaders";
     public static final String EVENT_NAME_LOADING_COMPLETE = "loadingComplete";
     
@@ -57,19 +58,22 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
     private final int maxLevel;
     private final int filesPerFolder;
     private final int maxActiveLoaders;
-    private long loadCheckDelay;
+    private final long loadCheckDelay;
+    private final boolean spoofSiteFiles;
     private String eventNameLoadSiteFolders;
     private String eventNameLoadSiteFiles;
+    private String eventNameSpoofSiteFiles;
     private String eventNameScheduleLoaders;
     private String eventNameLoadingComplete;
 
     /**
-     * @param activeSiteLoaders                 the number of concurrently-active processes site loaders
+     * @param spoofSiteFiles                    <tt>true</tt> to use {@link SpoofFileLoader remote file spoofing}
      */
     public ScheduleSiteLoaders(
             SessionService sessionService, FileFolderService fileFolderService,
             int subfolders, int maxDepth, int filesPerFolder,
-            int maxActiveLoaders, long loadCheckDelay)
+            int maxActiveLoaders, long loadCheckDelay,
+            boolean spoofSiteFiles)
     {
         super();
         
@@ -83,8 +87,11 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
         this.maxActiveLoaders = maxActiveLoaders;
         this.loadCheckDelay = loadCheckDelay;
         
+        this.spoofSiteFiles = spoofSiteFiles;
+        
         this.eventNameLoadSiteFolders = EVENT_NAME_LOAD_SITE_FOLDERS;
         this.eventNameLoadSiteFiles = EVENT_NAME_LOAD_SITE_FILES;
+        this.eventNameSpoofSiteFiles = EVENT_NAME_SPOOF_SITE_FILES;
         this.eventNameScheduleLoaders = EVENT_NAME_SCHEDULE_LOADERS;
         this.eventNameLoadingComplete = EVENT_NAME_LOADING_COMPLETE;
     }
@@ -103,6 +110,14 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
     public void setEventNameLoadSiteFiles(String eventNameLoadSiteFiles)
     {
         this.eventNameLoadSiteFiles = eventNameLoadSiteFiles;
+    }
+    
+    /**
+     * Override the {@link #EVENT_NAME_SPOOF_SITE_FILES default} output event name
+     */
+    public void setEventNameSpoofSiteFiles(String eventNameSpoofSiteFiles)
+    {
+        this.eventNameSpoofSiteFiles = eventNameSpoofSiteFiles;
     }
     
     /**
@@ -170,7 +185,8 @@ public class ScheduleSiteLoaders extends AbstractEventProcessor
                             .add(FIELD_FOLDERS_TO_CREATE, Integer.valueOf(0))
                             .add(FIELD_FILES_TO_CREATE, Integer.valueOf(filesToCreate))
                             .get();
-                    Event loadEvent = new Event(eventNameLoadSiteFiles, loadData);
+                    String fileLoadEvent = spoofSiteFiles ? eventNameSpoofSiteFiles : eventNameLoadSiteFiles;
+                    Event loadEvent = new Event(fileLoadEvent, loadData);
                     // Each load event must be associated with a session
                     String sessionId = sessionService.startSession(loadData);
                     loadEvent.setSessionId(sessionId);

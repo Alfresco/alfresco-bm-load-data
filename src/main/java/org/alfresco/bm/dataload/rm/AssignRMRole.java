@@ -110,7 +110,7 @@ public class AssignRMRole extends AuthenticatedHttpEventProcessor
         {
             if (httpStatus.getStatusCode() == HttpStatus.SC_CONFLICT )
             {
-                // site already exist
+                // RM role already exists
                 return new EventResult(
                         String.format("Ignoring assign rm role %s, already present in alfresco: ", role),
                         nextEvent);

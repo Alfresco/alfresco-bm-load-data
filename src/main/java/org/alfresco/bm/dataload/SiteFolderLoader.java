@@ -60,6 +60,7 @@ import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.commons.logging.Log;
 
 import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBObject;
@@ -204,7 +205,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
     
     private EventResult loadFolder(FolderData folder, int foldersToCreate, int filesToCreate) throws IOException
     {
-        UserData user = getUser(folder);
+        UserData user = SiteFolderLoader.getUser(siteDataService, userDataService, folder, logger);
         String username = user.getUsername();
         String password = user.getPassword();
         
@@ -342,7 +343,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
      * Attempt to find a user to use.<br/>
      * The site ID will be used to find a valid site manager or collaborator.
      */
-    private UserData getUser(FolderData folder)
+    /*protected*/ static UserData getUser(SiteDataService siteDataService, UserDataService userDataService, FolderData folder, Log logger)
     {
         String folderPath = folder.getPath();
         int idxSites = folderPath.indexOf("/" + CreateSite.PATH_SNIPPET_SITES + "/");
