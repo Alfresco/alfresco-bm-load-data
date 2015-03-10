@@ -250,9 +250,12 @@
         <constructor-arg name="fileFolderService" ref="fileFolderService" />
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
+        <constructor-arg name="filesPerTxn" value="${spoof.filesPerTxn}"/>
         <constructor-arg name="minFileSize" value="${spoof.minFileSize}"/>
         <constructor-arg name="maxFileSize" value="${spoof.maxFileSize}"/>
         <constructor-arg name="forceBinaryStorage" value="${spoof.forceBinaryStorage}"/>
+        <constructor-arg name="descriptionCount" value="${spoof.descriptionCount}"/>
+        <constructor-arg name="descriptionSize" value="${spoof.descriptionSize}"/>
         <property name="chart" value="true"/>
         <property name="eventNameSiteFilesSpoofed" value="siteFilesSpoofed" />
     </bean>

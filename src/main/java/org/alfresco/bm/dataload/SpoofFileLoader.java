@@ -65,18 +65,24 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
     private String eventNameSiteFilesSpoofed;
     
     // Spoofing properties
+    private final int filesPerTxn;
     private final long minFileSize;
     private final long maxFileSize;
     private final boolean forceBinaryStorage;
+    private final int descriptionCount;
+    private final long descriptionSize;
 
     /**
      * @param sessionService                    service to close this loader's session
      * @param fileFolderService                 service to access folders
      * @param userDataService                   service to access usernames and passwords
      * @param siteDataService                   service to access site details
+     * @param filesPerTxn                       the number of files to write per transaction
      * @param minFileSize                       minimum spoofed file size
      * @param maxFileSize                       maximum spoofed file size
-     * @param forceBinaryStorage                <tt>true</tt> to force disk space to be filled
+     * @param forceBinaryStorage                <tt>true</tt> to force binaries to be written to the Alfresco content store
+     * @param descriptionCount                  the number of <b>cm:description</b> properties to write
+     * @param descriptionSize                   the size (bytes) of each <b>cm:description</b> property
      */
     public SpoofFileLoader(
             HttpClientProvider httpClientProvider,
@@ -86,7 +92,9 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
             FileFolderService fileFolderService,
             UserDataService userDataService,
             SiteDataService siteDataService,
-            long minFileSize, long maxFileSize, boolean forceBinaryStorage)
+            int filesPerTxn,
+            long minFileSize, long maxFileSize, boolean forceBinaryStorage,
+            int descriptionCount, long descriptionSize)
     {
         super(httpClientProvider, authenticationDetailsProvider, baseUrl);
         
@@ -95,9 +103,12 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
         
+        this.filesPerTxn = filesPerTxn;
         this.minFileSize = minFileSize;
         this.maxFileSize = maxFileSize;
         this.forceBinaryStorage = forceBinaryStorage;
+        this.descriptionCount = descriptionCount;
+        this.descriptionSize = descriptionSize;
         
         this.eventNameSiteFilesSpoofed = EVENT_NAME_SITE_FILES_SPOOFED;
     }
@@ -165,9 +176,12 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
         DBObject reqObj = BasicDBObjectBuilder.start()
                 .append("folderPath", folderPath)
                 .append("fileCount", filesToCreate)
+                .append("filesPerTxn", filesPerTxn)
                 .append("minFileSize", minFileSize)
                 .append("maxFileSize", maxFileSize)
                 .append("forceBinaryStorage", forceBinaryStorage)
+                .append("descriptionCount", descriptionCount)
+                .append("descriptionSize", descriptionSize)
                 .get();
         
         HttpEntity jsonEntity = new StringEntity(reqObj.toString(), ContentType.TEXT_PLAIN);
