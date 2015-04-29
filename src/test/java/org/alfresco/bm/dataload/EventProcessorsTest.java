@@ -104,7 +104,7 @@ public class EventProcessorsTest
         StopWatch stopWatch = new StopWatch();
         PrepareSites processor = new PrepareSites(userDataService, siteDataService);
         EventResult result = processor.processEvent(null, stopWatch);
-        assertEquals("Prepared 100 sites.", result.getData());
+        assertEquals("Prepared 100 sites to reach a count of 100 valid sites.", result.getData());
         
         assertEquals(PrepareSites.DEFAULT_SITES_COUNT, siteDataService.countSites(null, DataCreationState.NotScheduled));
         assertEquals(PrepareSites.DEFAULT_SITES_COUNT, siteDataService.countSiteMembers(null, DataCreationState.NotScheduled));
