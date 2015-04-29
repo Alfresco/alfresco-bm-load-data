@@ -82,8 +82,13 @@ public class PrepareSites extends AbstractEventProcessor
     public EventResult processEvent(Event event) throws Exception
     {
         int preparedCount = 0;
-        for (int siteCount = 0; siteCount < sitesCount; siteCount++)
+        int siteNumber = -1;
+        int validSites = 0;
+        while (validSites < sitesCount)
         {
+            // Start with site number 0
+            siteNumber++;
+            
             // First choose a random user to be the creator / manager for the site
             UserData user = userDataService.getRandomUser();
             if (user == null)
@@ -93,11 +98,19 @@ public class PrepareSites extends AbstractEventProcessor
             String username = user.getUsername();
             String domain = user.getDomain();
             
-            String siteId = String.format("Site.%s.%05d", domain, siteCount);
+            String siteId = String.format("Site.%s.%05d", domain, siteNumber);
             SiteData site = siteDataService.getSite(siteId);
             if (site != null)
             {
-                // Site already exists
+                // Site already exists.  Check that it is valid.
+                DataCreationState siteState = site.getCreationState();
+                if (siteState != DataCreationState.Failed)
+                {
+                    // We found a site that will be scheduled, created, etc.
+                    // It is a valid site and we count it
+                    validSites++;
+                }
+                // Move onto a new site number (i.e. a new site name) and try again
                 continue;
             }
 
@@ -115,6 +128,7 @@ public class PrepareSites extends AbstractEventProcessor
             // Persist
             siteDataService.addSite(newSite);
             preparedCount++;
+            validSites++;
             
             // Record the user as the site manager
             final SiteMemberData siteMember = new SiteMemberData();
@@ -129,7 +143,7 @@ public class PrepareSites extends AbstractEventProcessor
         Event outputEvent = new Event(eventNameSitesPrepared, null);
 
         // Create result
-        String msg = "Prepared " + preparedCount + " sites.";
+        String msg = "Prepared " + preparedCount + " sites to reach a count of " + validSites + " valid sites.";
         EventResult result = new EventResult(msg, Collections.singletonList(outputEvent));
 
         // Done
