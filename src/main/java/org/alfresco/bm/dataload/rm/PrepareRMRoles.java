@@ -144,7 +144,7 @@ public class PrepareRMRoles extends AbstractEventProcessor
                 // The site membership already exists
                 continue;
             }
-            // Persist user with an rm role - we go directly to the scheduled state
+            // Persist user with a RM role - we go directly to the scheduled state
             siteMember = new SiteMemberData();
             siteMember.setCreationState(DataCreationState.Scheduled);
             siteMember.setUsername(username);

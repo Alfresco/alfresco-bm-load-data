@@ -120,7 +120,7 @@
         <constructor-arg name="fileFolderService" ref="fileFolderService"/>
         <constructor-arg name="publicApiFactory" ref="publicApiFactory"/>
     </bean>
-    <bean id="producer.siteCreated" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
+   <bean id="producer.siteCreated" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
     
     <!-- Barrier after site-creation scheduling is complete -->
     <bean id="producer.sitesCreated" class="org.alfresco.bm.event.producer.RedirectEventProducer" parent="producer.base" >
@@ -153,6 +153,7 @@
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <constructor-arg name="publicApiFactory" ref="publicApiFactory"/>
     </bean>
+
     <bean id="producer.siteMemberCreated" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
     
     <!--                    -->
@@ -188,8 +189,22 @@
         <constructor-arg name="baseUrl" value="${alfresco.url}" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <property name="chart" value="false"/>
-        <property name="eventNameRMRoleAssigned" value="scheduleSiteLoaders" />
+        <property name="eventNameRMRoleAssigned" value="assignedRMRole" />
     </bean>
+    
+    <bean id="producer.assignedRMRole" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
+    
+    <!-- Event raised by the "scheduleSiteLoaders" event processor; add files to RM -->
+    <bean id="event.rmFile" class="org.alfresco.bm.dataload.rm.FileRMFile" parent="event.base">
+		<constructor-arg name="siteDataService" ref="siteDataService" />
+		<constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
+		<constructor-arg name="cmisCtx" ref="cmis.opCtx" />
+		<constructor-arg name="username" value="${rm.username}" />
+        <constructor-arg name="password" value="${rm.password}" />
+		<property name="chart" value="true" />
+		<property name="eventNameRmFileComplete" value="rmFileComplete" />
+	</bean>
+    <bean id="producer.rmFileComplete" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
     
     <!--                    -->
     <!-- Site Data          -->
@@ -224,6 +239,9 @@
         <constructor-arg name="testFileService" ref="testFileService"/>
         <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
         <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
+        <property name="rmEnabled" value="${rm.enabled}" />
+        <property name="rmFileRatio" value="${rm.fileRatio}" />
+	    <property name="rmFileDelay" value="${rm.fileDelay}" />
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="siteFoldersLoaded" />
     </bean>
@@ -237,6 +255,9 @@
         <constructor-arg name="testFileService" ref="testFileService"/>
         <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
         <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
+        <property name="rmEnabled" value="${rm.enabled}" />
+        <property name="rmFileRatio" value="${rm.fileRatio}" />
+	    <property name="rmFileDelay" value="${rm.fileDelay}" />
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="siteFilesLoaded" />
     </bean>

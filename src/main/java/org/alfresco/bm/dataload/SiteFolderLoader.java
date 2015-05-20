@@ -24,15 +24,19 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import management.CMIS;
+
 import org.alfresco.bm.cm.FileFolderService;
 import org.alfresco.bm.cm.FolderData;
 import org.alfresco.bm.data.DataCreationState;
+import org.alfresco.bm.dataload.rm.FileRMFile;
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
@@ -62,19 +66,21 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBObject;
 
 /**
- * Schedule the {@link #EVENT_NAME_LOAD_FOLDERS folder} and {@link #EVENT_NAME_LOAD_FILES file} loaders
- * and {@link #EVENT_NAME_SCHEDULE_LOADERS reschedule self} until there are enough folders and files.
+ * Schedule the {@link #EVENT_NAME_LOAD_FOLDERS folder} and {@link #EVENT_NAME_LOAD_FILES file} loaders and
+ * {@link #EVENT_NAME_SCHEDULE_LOADERS reschedule self} until there are enough folders and files.
  * <p/>
- * Each site has one folder, the <i>Document Library</i>, that acts as the root of each tree.
- * Each <i>Document Library</i> is at <a href="http://en.wikipedia.org/wiki/Tree_%28data_structure%29">level one</a>
- * (depth zero) in the calculations.
+ * Each site has one folder, the <i>Document Library</i>, that acts as the root of each tree. Each <i>Document
+ * Library</i> is at <a href="http://en.wikipedia.org/wiki/Tree_%28data_structure%29">level one</a> (depth zero) in the
+ * calculations.
  * <p/>
  * Every folder receives the same number of files.<br/>
  * To calculate the number of folders and files:
+ * 
  * <pre>
  *     sites:           the total number of sites
  *     subfolders:      the number of subfolders in each folder (except the last level)
@@ -86,17 +92,20 @@ import com.mongodb.DBObject;
  *             = (sites)*(    1        +  subfolders  + subfolders^2 + ... + subfolders^(maxDepth-1))
  *     files   = (folders)*(filesPerFolder)
  * </pre>
+ * 
  * Using the test defaults:
  * <ul>
- *   <li>sites: 100</li>
- *   <li>subfolders: 5</li>
- *   <li>filesPerFolder: 100</li>
- *   <li>maxDepth: 3</li>
+ * <li>sites: 100</li>
+ * <li>subfolders: 5</li>
+ * <li>filesPerFolder: 100</li>
+ * <li>maxDepth: 3</li>
  * </ul>
+ * 
  * <pre>
  *     folders = (100)*( 1 + 5 + 25 ) =   3,100
  *     files   = 3100*100             = 310,000
  * </pre>
+ * 
  * TODO: Put on Wiki
  * 
  * @author Derek Hulley
@@ -105,7 +114,9 @@ import com.mongodb.DBObject;
 public class SiteFolderLoader extends AbstractEventProcessor
 {
     public static final String EVENT_NAME_SITE_FOLDER_LOADED = "siteFolderLoaded";
-    
+    public static final double DEFAULT_FILE_RATIO = 0.1;
+    public static final long DEFAULT_FILING_DELAY = 100L;
+
     private final SessionService sessionService;
     private final FileFolderService fileFolderService;
     private final UserDataService userDataService;
@@ -114,53 +125,118 @@ public class SiteFolderLoader extends AbstractEventProcessor
     private final String cmisBindingUrl;
     private final OperationContext cmisCtx;
     private String eventNameSiteFolderLoaded;
+    private boolean rmEnabled;
+    private double rmFileRatio;
+    private long rmFileDelay;
 
     /**
+     * Constructor
      * 
-     * @param sessionService                    service to close this loader's session
-     * @param fileFolderService                 service to access folders
-     * @param userDataService                   service to access usernames and passwords
-     * @param siteDataService                   service to access site details
-     * @param testFileService                   service to access sample documents
-     * @param cmisBindingUrl                    the CMIS <b>browser</b> binding URL
-     * @param cmisCtx                           the operation context for all calls made by the session.
+     * @param sessionService
+     *            service to close this loader's session
+     * @param fileFolderService
+     *            service to access folders
+     * @param userDataService
+     *            service to access user names and passwords
+     * @param siteDataService
+     *            service to access site details
+     * @param testFileService
+     *            service to access sample documents
+     * @param cmisBindingUrl
+     *            the CMIS <b>browser</b> binding URL
+     * @param cmisCtx
+     *            the operation context for all calls made by the session.
      */
-    public SiteFolderLoader(
-            SessionService sessionService,
-            FileFolderService fileFolderService,
-            UserDataService userDataService,
-            SiteDataService siteDataService,
-            TestFileService testFileService,
-            String cmisBindingUrl,
-            OperationContext cmisCtx)
+    public SiteFolderLoader(SessionService sessionService, FileFolderService fileFolderService,
+            UserDataService userDataService, SiteDataService siteDataService, TestFileService testFileService,
+            String cmisBindingUrl, OperationContext cmisCtx)
     {
         super();
-        
+
         this.sessionService = sessionService;
         this.fileFolderService = fileFolderService;
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
         this.testFileService = testFileService;
-        
+
         this.cmisBindingUrl = cmisBindingUrl;
         this.cmisCtx = cmisCtx;
-        
+
         this.eventNameSiteFolderLoaded = EVENT_NAME_SITE_FOLDER_LOADED;
+        this.setRmFileRatio(DEFAULT_FILE_RATIO);
+        this.setRmFileDelay(DEFAULT_FILING_DELAY);
     }
 
     /**
      * Override the {@link #EVENT_NAME_SITE_FOLDER_LOADED default} event name
+     * @since 2.6
      */
     public void setEventNameSiteFolderLoaded(String eventNameSiteFolderLoaded)
     {
         this.eventNameSiteFolderLoaded = eventNameSiteFolderLoaded;
     }
 
+    /**
+     * @return whether if Records Management is enabled or not
+     * @since 2.6
+     */
+    public boolean getRmEnabled()
+    {
+        return rmEnabled;
+    }
+
+    /**
+     * Enables or disables RM
+     * 
+     * @param rmEnabled
+     * @since 2.6
+     */
+    public void setRmEnabled(boolean rmEnabled)
+    {
+        this.rmEnabled = rmEnabled;
+    }
+
+    /**
+     * @return RM file ration
+     * @since 2.6
+     */
+    public double getRmFileRatio()
+    {
+        return rmFileRatio;
+    }
+
+    /**
+     * Override the {@link #DEFAULT_FILE_RATIO } default value
+     * @since 2.6
+     */
+    public void setRmFileRatio(double rmFileRatio)
+    {
+        this.rmFileRatio = rmFileRatio;
+    }
+
+    /**
+     * @return RM file delay for follow-up events
+     * @since 2.6
+     */
+    public long getRmFileDelay()
+    {
+        return rmFileDelay;
+    }
+
+    /**
+     * Override the {@link #DEFAULT_FILING_DELAY } default value
+     * @since 2.6
+     */
+    public void setRmFileDelay(long rmFileDelay)
+    {
+        this.rmFileDelay = rmFileDelay;
+    }
+
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
         super.suspendTimer();
-        
+
         DBObject dataObj = (DBObject) event.getData();
         if (dataObj == null)
         {
@@ -186,12 +262,10 @@ public class SiteFolderLoader extends AbstractEventProcessor
         {
             return new EventResult("Load scheduling should create a session for each loader.", false);
         }
-        
+
         try
         {
-            return loadFolder(
-                    folder,
-                    foldersToCreate, filesToCreate);        // Formatting is for easier debugging!
+            return loadFolder(folder, foldersToCreate, filesToCreate); 
         }
         finally
         {
@@ -202,24 +276,25 @@ public class SiteFolderLoader extends AbstractEventProcessor
             fileFolderService.deleteFolder(context, lockedPath, false);
         }
     }
-    
+
     private EventResult loadFolder(FolderData folder, int foldersToCreate, int filesToCreate) throws IOException
     {
         UserData user = SiteFolderLoader.getUser(siteDataService, userDataService, folder, logger);
         String username = user.getUsername();
         String password = user.getPassword();
-        
+
         try
         {
+            List<Event> scheduleEvents = new ArrayList<Event>();
             // Establish the CMIS Session
             super.resumeTimer();
-            Session session = startCMISSession(username, password);
+            Session session = CMIS.startSession(username, password, this.cmisBindingUrl, this.cmisCtx);
             super.suspendTimer();
-            
+
             // Get the folder
             String path = folder.getPath();
             Folder cmisFolder = FileUtils.getFolder(path, session);
-            
+
             // Create folders
             super.resumeTimer();
             createFolders(session, user, folder, cmisFolder, foldersToCreate);
@@ -227,47 +302,51 @@ public class SiteFolderLoader extends AbstractEventProcessor
 
             // Create files
             super.resumeTimer();
-            createFiles(session, user, folder, cmisFolder, filesToCreate);
+            List<Event> eventsForRM = createFiles(session, user, folder, cmisFolder, filesToCreate);
             super.suspendTimer();
-            
+
             // Build next event
             DBObject eventData = BasicDBObjectBuilder.start()
                     .add(ScheduleSiteLoaders.FIELD_CONTEXT, folder.getContext())
-                    .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath())
-                    .get();
+                    .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath()).get();
             Event nextEvent = new Event(eventNameSiteFolderLoaded, eventData);
-            
-            DBObject resultData = BasicDBObjectBuilder.start()
+            // add follow-up event
+			scheduleEvents.add(nextEvent);
+			// add additional events
+            scheduleEvents.addAll(eventsForRM);
+
+            DBObject resultData = BasicDBObjectBuilder
+					.start()
                     .add("msg", "Created " + foldersToCreate + " folders and " + filesToCreate + " files.")
                     .add("path", folder.getPath())
                     .add("folderCount", foldersToCreate)
                     .add("fileCount", filesToCreate)
-                    .add("username", username)
-                    .get();
-            return new EventResult(resultData, Collections.singletonList(nextEvent));
+                    .add("docsToFileOnRMCount", eventsForRM.size())
+                    .add("username", username).get();
+					
+            return new EventResult(resultData, scheduleEvents);
         }
         catch (CmisRuntimeException e)
         {
             String error = e.getMessage();
             String stack = ExceptionUtils.getStackTrace(e);
             // Grab the CMIS information
-            DBObject data = BasicDBObjectBuilder
-                    .start()
-                    .append("error", error)
-                    .append("binding", cmisBindingUrl)
+            DBObject data = BasicDBObjectBuilder.start()
+					.append("error", error)
+					.append("binding", cmisBindingUrl)
                     .append("username", username)
-                    .append("folder", folder)
-                    .append("stack", stack)
-                    .push("cmisFault")
-                        .append("code", "" + e.getCode())               // BigInteger is not Serializable
-                        .append("errorContent", e.getErrorContent())
-                    .pop()
-                    .get();
+					.append("folder", folder)
+					.append("stack", stack)
+					.push("cmisFault")
+                    	.append("code", "" + e.getCode()) // BigInteger is not Serializable
+                    	.append("errorContent", e.getErrorContent())
+					.pop()
+					.get();
             // Build failure result
             return new EventResult(data, false);
         }
     }
-    
+
     /**
      */
     private void createFolders(Session session, UserData user, FolderData folder, Folder cmisFolder, int foldersToCreate)
@@ -277,11 +356,11 @@ public class SiteFolderLoader extends AbstractEventProcessor
         {
             // The folder name
             String newFolderName = UUID.randomUUID().toString();
-            
+
             Map<String, String> newFolderProps = new HashMap<String, String>();
             newFolderProps.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
             newFolderProps.put(PropertyIds.NAME, newFolderName);
-            
+
             Folder newCmisFolder = cmisFolder.createFolder(newFolderProps);
             // Record the folder
             String newFolderId = newCmisFolder.getId();
@@ -290,13 +369,21 @@ public class SiteFolderLoader extends AbstractEventProcessor
         // Increment counts
         fileFolderService.incrementFolderCount("", folderPath, foldersToCreate);
     }
-    
+
     /**
-     * @throws IOException          if the binary could not be uploaded
+     * @throws IOException
+     *             if the binary could not be uploaded
      */
-    private void createFiles(Session session, UserData user, FolderData folder, Folder cmisFolder, int filesToCreate) throws IOException
+    private List<Event> createFiles(Session session, UserData user, FolderData folder, Folder cmisFolder,
+            int filesToCreate) throws IOException
     {
         String folderPath = folder.getPath();
+        List<Event> nextEvents = new ArrayList<Event>();
+
+        // TODO: randomize the file to RM instead
+        int rmFileNeeded = (int) (DEFAULT_FILE_RATIO * filesToCreate); // the number of files sent to RM, based on
+                                                                       // DEFAULT_FILE_RATIO
+        int rmFileEventsScheduled = 0;
         for (int i = 0; i < filesToCreate; i++)
         {
             File file = testFileService.getFile();
@@ -305,24 +392,39 @@ public class SiteFolderLoader extends AbstractEventProcessor
                 throw new RuntimeException("No test files exist for upload: " + testFileService);
             }
             String filename = UUID.randomUUID().toString() + "-" + file.getName();
-            
+
             Map<String, String> newFileProps = new HashMap<String, String>();
             newFileProps.put(PropertyIds.OBJECT_TYPE_ID, "cmis:document");
             newFileProps.put(PropertyIds.NAME, filename);
-            
+
             // Open up a stream to the file
             InputStream is = new BufferedInputStream(new FileInputStream(file));
             Document newFile = null;
             try
             {
                 long fileLen = file.length();
-                ContentStream cs = new ContentStreamImpl(filename, BigInteger.valueOf(fileLen), "application/octet-stream", is);
+                ContentStream cs = new ContentStreamImpl(filename, BigInteger.valueOf(fileLen),
+                        "application/octet-stream", is);
 
                 newFile = cmisFolder.createDocument(newFileProps, cs, VersioningState.MAJOR);
-                
+
+                if (getRmEnabled() && cmisFolder.getPath() != null)
+                {
+                    if (rmFileEventsScheduled < rmFileNeeded)
+                    {
+                        long nextEventTime = System.currentTimeMillis();
+                        DBObject rmData = new BasicDBObject().append(FileRMFile.RM_FILE_PATH_ID, cmisFolder.getPath()
+                                + "/" + filename);
+                        Event nextEvent = new Event(FileRMFile.DEFAULT_EVENT_NAME_RM_FILE, nextEventTime
+                                + getRmFileDelay(), rmData);
+                        nextEvents.add(nextEvent);
+                        rmFileEventsScheduled++;
+                    }
+                }
+
                 // Increment counts
                 fileFolderService.incrementFileCount("", folderPath, 1);
-                
+
                 // Done
                 if (logger.isDebugEnabled())
                 {
@@ -333,28 +435,38 @@ public class SiteFolderLoader extends AbstractEventProcessor
             {
                 if (is != null)
                 {
-                    try { is.close(); } catch (IOException e) {}
+                    try
+                    {
+                        is.close();
+                    }
+                    catch (IOException e)
+                    {
+                    }
                 }
             }
         }
+        return nextEvents;
     }
-    
+
     /**
      * Attempt to find a user to use.<br/>
      * The site ID will be used to find a valid site manager or collaborator.
      */
-    /*protected*/ static UserData getUser(SiteDataService siteDataService, UserDataService userDataService, FolderData folder, Log logger)
+    /* protected */static UserData getUser(SiteDataService siteDataService, UserDataService userDataService,
+            FolderData folder, Log logger)
     {
         String folderPath = folder.getPath();
         int idxSites = folderPath.indexOf("/" + CreateSite.PATH_SNIPPET_SITES + "/");
         if (idxSites < 0)
         {
-            throw new IllegalStateException("This test expects to operate on folders within an existing site: " + folder);
+            throw new IllegalStateException("This test expects to operate on folders within an existing site: "
+                    + folder);
         }
         int idxDocLib = folderPath.indexOf("/" + CreateSite.PATH_SNIPPET_DOCLIB);
         if (idxDocLib < 0 || idxDocLib < idxSites)
         {
-            throw new IllegalStateException("This test expects to operate on folders within an existing site document library: " + folder);
+            throw new IllegalStateException(
+                    "This test expects to operate on folders within an existing site document library: " + folder);
         }
         String siteId = folderPath.substring(idxSites + 7, idxDocLib);
         // Check
@@ -363,15 +475,14 @@ public class SiteFolderLoader extends AbstractEventProcessor
         {
             throw new IllegalStateException("Unable to find site '" + siteId + "' taken from folder path: " + folder);
         }
-        SiteMemberData siteMember = siteDataService.randomSiteMember(
-                siteId, DataCreationState.Created, null,
+        SiteMemberData siteMember = siteDataService.randomSiteMember(siteId, DataCreationState.Created, null,
                 SiteRole.SiteManager.toString(), SiteRole.SiteCollaborator.toString());
         if (siteMember == null)
         {
             throw new IllegalStateException("Unable to find a collaborator or manager for site: " + siteId);
         }
         String username = siteMember.getUsername();
-        // Retrieve the userdata
+        // Retrieve the user data
         UserData user = userDataService.findUserByUsername(username);
         if (user == null)
         {
@@ -383,41 +494,5 @@ public class SiteFolderLoader extends AbstractEventProcessor
             logger.debug("Found site member '" + username + "' for folder '" + folderPath + "'.");
         }
         return user;
-    }
-    
-    /**
-     * Start a CMIS session
-     */
-    private Session startCMISSession(String username, String password)
-    {
-        // Build session parameters
-        Map<String, String> parameters = new HashMap<String, String>();
-        // Browser binding
-        parameters.put(SessionParameter.BINDING_TYPE, BindingType.BROWSER.value());
-        parameters.put(SessionParameter.BROWSER_URL, cmisBindingUrl);
-        // User
-        parameters.put(SessionParameter.USER, username);
-        parameters.put(SessionParameter.PASSWORD, password);
-        
-        // First check if we need to choose a repository
-        SessionFactory sessionFactory = SessionFactoryImpl.newInstance();
-        List<Repository> repositories = sessionFactory.getRepositories(parameters);
-        if (repositories.size() == 0)
-        {
-            return null;
-        }
-        String repositoryIdFirst = repositories.get(0).getId();
-        parameters.put(SessionParameter.REPOSITORY_ID, repositoryIdFirst);
-        
-        // Create the session
-        Session session = SessionFactoryImpl.newInstance().createSession(parameters);
-        session.setDefaultContext(cmisCtx);
-        
-        // Done
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Created CMIS session with user '" + username + "' to URL: " + cmisBindingUrl);
-        }
-        return session;
     }
 }

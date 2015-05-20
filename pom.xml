@@ -7,12 +7,12 @@
         <version>2.3</version>
     </parent>
     <artifactId>alfresco-benchmark-tests-dataload</artifactId>
-    <version>2.5-SNAPSHOT</version>
+    <version>2.6-SNAPSHOT</version>
     <packaging>war</packaging>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <server.version>2.0.8</server.version>
+        <server.version>2.0.9</server.version>
         <publicapi.version>2.0rc1</publicapi.version>
         <junit.version>4.12</junit.version>
 
