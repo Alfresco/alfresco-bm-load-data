@@ -49,6 +49,7 @@ public class PrepareSites extends AbstractEventProcessor
     private SiteDataService siteDataService;
     private String eventNameSitesPrepared;
     private int sitesCount;
+    private String siteFormat;
 
     /**
      * @param services              data collections
@@ -60,6 +61,7 @@ public class PrepareSites extends AbstractEventProcessor
         this.siteDataService = siteDataService; 
         this.eventNameSitesPrepared = EVENT_NAME_SITES_PREPARED;
         this.sitesCount = DEFAULT_SITES_COUNT;
+        this.setSiteFormat("Site.%s.%05d");
     }
 
     /**
@@ -98,7 +100,7 @@ public class PrepareSites extends AbstractEventProcessor
             String username = user.getUsername();
             String domain = user.getDomain();
             
-            String siteId = String.format("Site.%s.%05d", domain, siteNumber);
+            String siteId = String.format(getSiteFormat(), domain, siteNumber);
             SiteData site = siteDataService.getSite(siteId);
             if (site != null)
             {
@@ -152,5 +154,15 @@ public class PrepareSites extends AbstractEventProcessor
             logger.debug(msg);
         }
         return result;
+    }
+
+    public String getSiteFormat()
+    {
+        return siteFormat;
+    }
+
+    public void setSiteFormat(String siteFormat)
+    {
+        this.siteFormat = siteFormat;
     }
 }

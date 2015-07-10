@@ -104,6 +104,7 @@
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <property name="sitesCount" value="${load.sitesCount}" />
+        <property name="siteFormat" value="${load.siteFormat}"/>
         <property name="eventNameSitesPrepared" value="createSites" />
         <property name="chart" value="false"/>
     </bean>
