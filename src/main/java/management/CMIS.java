@@ -28,24 +28,23 @@ public class CMIS
     /**
      * Starts a CMIS session
      * 
-     * @param username_p            (String) user name to use for CMIS session
-     * @param password_p            (String) password for user
-     * @param cmisBindingUrl_p      (String) the CMIS <b>browser</b> binding URL
-     * @param cmisCtx_p             (String) the operation context for all calls made by the session
+     * @param username            (String) user name to use for CMIS session
+     * @param password            (String) password for user
+     * @param cmisBindingUrl      (String) the CMIS <b>browser</b> binding URL
+     * @param cmisCtx             (String) the operation context for all calls made by the session
      * 
      * @return (Session)CMIS session
      */
-    public static Session startSession(String username_p, String password_p, String cmisBindingUrl_p,
-            OperationContext cmisCtx_p)
+    public static Session startSession(String username, String password, String cmisBindingUrl, OperationContext cmisCtx)
     {
      // Build session parameters
         Map<String, String> parameters = new HashMap<String, String>();
         // Browser binding
         parameters.put(SessionParameter.BINDING_TYPE, BindingType.BROWSER.value());
-        parameters.put(SessionParameter.BROWSER_URL, cmisBindingUrl_p);
+        parameters.put(SessionParameter.BROWSER_URL, cmisBindingUrl);
         // User
-        parameters.put(SessionParameter.USER, username_p);
-        parameters.put(SessionParameter.PASSWORD, password_p);
+        parameters.put(SessionParameter.USER, username);
+        parameters.put(SessionParameter.PASSWORD, password);
 
         // First check if we need to choose a repository
         SessionFactory sessionFactory = SessionFactoryImpl.newInstance();
@@ -59,12 +58,12 @@ public class CMIS
 
         // Create the session
         Session session = SessionFactoryImpl.newInstance().createSession(parameters);
-        session.setDefaultContext(cmisCtx_p);
+        session.setDefaultContext(cmisCtx);
 
         // Done
         if (logger.isDebugEnabled())
         {
-            logger.debug("Created CMIS session with user '" + username_p + "' to URL: " + cmisBindingUrl_p);
+            logger.debug("Created CMIS session with user '" + username + "' to URL: " + cmisBindingUrl);
         }
         return session;
     }
