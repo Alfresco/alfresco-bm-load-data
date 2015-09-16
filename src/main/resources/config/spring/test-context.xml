@@ -164,7 +164,7 @@
     <bean id="producer.siteMembersCreated" class="org.alfresco.bm.event.producer.RedirectEventProducer" parent="producer.base" >
         <constructor-arg name="newEventName" value="prepareRM" />
     </bean>
-    <bean id="event.prepareRM" class="org.alfresco.bm.dataload.rm.PrepareRM" parent="event.base" >
+    <bean id="event.prepareRM" class="org.alfresco.bm.dataload.rm.eventprocessor.PrepareRM" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService" />
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <constructor-arg name="enabled" value="${rm.enabled}" />
@@ -174,7 +174,7 @@
         <property name="eventNameRMPrepared" value="prepareRMRoles"/>
     </bean>
     
-    <bean id="event.prepareRMRoles" class="org.alfresco.bm.dataload.rm.PrepareRMRoles" parent="event.base" >
+    <bean id="event.prepareRMRoles" class="org.alfresco.bm.dataload.rm.eventprocessor.PrepareRMRoles" parent="event.base" >
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService" />
         <property name="chart" value="false"/>
@@ -184,7 +184,7 @@
         <property name="eventNameRMRolesPrepared" value="rmRolesPrepared"/>
     </bean>
     
-    <bean id="event.assignRMRole" class="org.alfresco.bm.dataload.rm.AssignRMRole" parent="event.base" >
+    <bean id="event.assignRMRole" class="org.alfresco.bm.dataload.rm.eventprocessor.AssignRMRole" parent="event.base" >
         <constructor-arg name="httpClientProvider" ref="httpClientProvider" />
         <constructor-arg name="authenticationDetailsProvider" ref="authenticationDetailsProvider" />
         <constructor-arg name="baseUrl" value="${alfresco.url}" />
@@ -196,7 +196,7 @@
     <bean id="producer.assignedRMRole" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
     
     <!-- Event raised by the "scheduleSiteLoaders" event processor; add files to RM -->
-    <bean id="event.rmFile" class="org.alfresco.bm.dataload.rm.FileRMFile" parent="event.base">
+    <bean id="event.rmFile" class="org.alfresco.bm.dataload.rm.eventprocessor.FileRMFile" parent="event.base">
 		<constructor-arg name="siteDataService" ref="siteDataService" />
 		<constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
 		<constructor-arg name="cmisCtx" ref="cmis.opCtx" />

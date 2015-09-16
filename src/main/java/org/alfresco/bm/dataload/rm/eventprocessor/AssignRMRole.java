@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.alfresco.bm.dataload.rm;
+package org.alfresco.bm.dataload.rm.eventprocessor;
 
 import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.event.Event;

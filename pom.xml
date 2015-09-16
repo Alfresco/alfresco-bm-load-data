@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <server.version>2.0.9</server.version>
+        <server.version>2.0.10-SNAPSHOT</server.version>
         <publicapi.version>2.0rc1</publicapi.version>
         <junit.version>4.12</junit.version>
 
