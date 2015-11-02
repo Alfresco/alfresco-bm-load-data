@@ -304,19 +304,19 @@ public class SiteFolderLoader extends AbstractEventProcessor
                     .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath()).get();
             Event nextEvent = new Event(eventNameSiteFolderLoaded, eventData);
             // add follow-up event
-			scheduleEvents.add(nextEvent);
-			// add additional events
+            scheduleEvents.add(nextEvent);
+            // add additional events
             scheduleEvents.addAll(eventsForRM);
 
             DBObject resultData = BasicDBObjectBuilder
-					.start()
+                    .start()
                     .add("msg", "Created " + foldersToCreate + " folders and " + filesToCreate + " files.")
                     .add("path", folder.getPath())
                     .add("folderCount", foldersToCreate)
                     .add("fileCount", filesToCreate)
                     .add("docsToFileOnRMCount", eventsForRM.size())
                     .add("username", username).get();
-					
+                    
             return new EventResult(resultData, scheduleEvents);
         }
         catch (CmisRuntimeException e)
@@ -325,16 +325,16 @@ public class SiteFolderLoader extends AbstractEventProcessor
             String stack = ExceptionUtils.getStackTrace(e);
             // Grab the CMIS information
             DBObject data = BasicDBObjectBuilder.start()
-					.append("error", error)
-					.append("binding", cmisBindingUrl)
+                    .append("error", error)
+                    .append("binding", cmisBindingUrl)
                     .append("username", username)
-					.append("folder", folder)
-					.append("stack", stack)
-					.push("cmisFault")
-                    	.append("code", "" + e.getCode()) // BigInteger is not Serializable
-                    	.append("errorContent", e.getErrorContent())
-					.pop()
-					.get();
+                    .append("folder", folder)
+                    .append("stack", stack)
+                    .push("cmisFault")
+                        .append("code", "" + e.getCode()) // BigInteger is not Serializable
+                        .append("errorContent", e.getErrorContent())
+                    .pop()
+                    .get();
             // Build failure result
             return new EventResult(data, false);
         }

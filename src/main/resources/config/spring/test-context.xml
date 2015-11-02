@@ -197,14 +197,14 @@
     
     <!-- Event raised by the "scheduleSiteLoaders" event processor; add files to RM -->
     <bean id="event.rmFile" class="org.alfresco.bm.dataload.rm.eventprocessor.FileRMFile" parent="event.base">
-		<constructor-arg name="siteDataService" ref="siteDataService" />
-		<constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
-		<constructor-arg name="cmisCtx" ref="cmis.opCtx" />
-		<constructor-arg name="username" value="${rm.username}" />
+        <constructor-arg name="siteDataService" ref="siteDataService" />
+        <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
+        <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
+        <constructor-arg name="username" value="${rm.username}" />
         <constructor-arg name="password" value="${rm.password}" />
-		<property name="chart" value="true" />
-		<property name="eventNameRmFileComplete" value="rmFileComplete" />
-	</bean>
+        <property name="chart" value="true" />
+        <property name="eventNameRmFileComplete" value="rmFileComplete" />
+    </bean>
     <bean id="producer.rmFileComplete" class="org.alfresco.bm.event.producer.TerminateEventProducer" parent="producer.base" />
     
     <!--                    -->
@@ -242,7 +242,7 @@
         <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
         <property name="rmEnabled" value="${rm.enabled}" />
         <property name="rmFileRatio" value="${rm.fileRatio}" />
-	    <property name="rmFileDelay" value="${rm.fileDelay}" />
+        <property name="rmFileDelay" value="${rm.fileDelay}" />
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="siteFoldersLoaded" />
     </bean>
@@ -258,7 +258,7 @@
         <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
         <property name="rmEnabled" value="${rm.enabled}" />
         <property name="rmFileRatio" value="${rm.fileRatio}" />
-	    <property name="rmFileDelay" value="${rm.fileDelay}" />
+        <property name="rmFileDelay" value="${rm.fileDelay}" />
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="siteFilesLoaded" />
     </bean>
