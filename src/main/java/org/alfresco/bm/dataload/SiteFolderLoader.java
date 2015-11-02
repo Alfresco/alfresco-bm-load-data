@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import management.CMIS;
-
 import org.alfresco.bm.cm.FileFolderService;
 import org.alfresco.bm.cm.FolderData;
 import org.alfresco.bm.data.DataCreationState;
@@ -47,6 +45,7 @@ import org.alfresco.bm.site.SiteMemberData;
 import org.alfresco.bm.site.SiteRole;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
+import org.alfresco.management.CMIS;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.OperationContext;

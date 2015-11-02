@@ -3,14 +3,13 @@ package org.alfresco.bm.dataload.rm.eventprocessor;
 import java.util.HashMap;
 import java.util.Map;
 
-import management.CMIS;
-
 import org.alfresco.bm.dataload.CreateSite;
 import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
+import org.alfresco.management.CMIS;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.OperationContext;

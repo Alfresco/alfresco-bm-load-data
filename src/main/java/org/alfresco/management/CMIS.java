@@ -1,4 +1,4 @@
-package management;
+package org.alfresco.management;
 
 import java.util.HashMap;
 import java.util.List;
