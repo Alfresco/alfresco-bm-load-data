@@ -198,6 +198,7 @@
     <!-- Event raised by the "scheduleSiteLoaders" event processor; add files to RM -->
     <bean id="event.rmFile" class="org.alfresco.bm.dataload.rm.eventprocessor.FileRMFile" parent="event.base">
         <constructor-arg name="siteDataService" ref="siteDataService" />
+        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}" />
         <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
         <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
         <constructor-arg name="username" value="${rm.username}" />
@@ -239,6 +240,7 @@
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <constructor-arg name="testFileService" ref="testFileService"/>
         <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
+        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}" />
         <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
         <property name="rmEnabled" value="${rm.enabled}" />
         <property name="rmFileRatio" value="${rm.fileRatio}" />
@@ -255,6 +257,7 @@
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <constructor-arg name="testFileService" ref="testFileService"/>
         <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}" />
+        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}" />
         <constructor-arg name="cmisCtx" ref="cmis.opCtx" />
         <property name="rmEnabled" value="${rm.enabled}" />
         <property name="rmFileRatio" value="${rm.fileRatio}" />

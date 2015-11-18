@@ -35,6 +35,7 @@ public class FileRMFile extends AbstractEventProcessor
     public static final String RM_UNIFIED_RECORDS = "Unfiled Records";
     
     private final String cmisBindingUrl;
+    private final String cmisBindingType;
     private final OperationContext cmisCtx;
     private final String username;
     private final String password;
@@ -52,12 +53,13 @@ public class FileRMFile extends AbstractEventProcessor
      * @param rmEnabled
      *            <tt>true</tt> if RM is enabled
      */
-    public FileRMFile(SiteDataService siteDataService, String cmisBindingUrl, OperationContext cmisCtx,
+    public FileRMFile(SiteDataService siteDataService, String cmisBindingUrl, String cmisBindingType, OperationContext cmisCtx,
             String username, String password)
     {
         super();
         this.siteDataService = siteDataService;
         this.cmisBindingUrl = cmisBindingUrl;
+        this.cmisBindingType = cmisBindingType;
         this.cmisCtx = cmisCtx;
         this.username = username;
         this.password = password;
@@ -93,7 +95,7 @@ public class FileRMFile extends AbstractEventProcessor
         {
             try
             {
-                Session cmisSession = CMIS.startSession(username, password, cmisBindingUrl, cmisCtx);
+                Session cmisSession = CMIS.startSession(username, password, cmisBindingType, cmisBindingUrl, cmisCtx);
 
                 Document docOnRm = fileToRM(existingFile, cmisSession, rmSiteId);
                 msg = "Document: " + docOnRm.getId() + " was filed to RM";

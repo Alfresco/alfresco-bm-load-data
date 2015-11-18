@@ -116,6 +116,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
     private final SiteDataService siteDataService;
     private final TestFileService testFileService;
     private final String cmisBindingUrl;
+    private final String cmisBindingType;
     private final OperationContext cmisCtx;
     private String eventNameSiteFolderLoaded;
     private boolean rmEnabled;
@@ -142,7 +143,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
      */
     public SiteFolderLoader(SessionService sessionService, FileFolderService fileFolderService,
             UserDataService userDataService, SiteDataService siteDataService, TestFileService testFileService,
-            String cmisBindingUrl, OperationContext cmisCtx)
+            String cmisBindingUrl, String cmisBindingType, OperationContext cmisCtx)
     {
         super();
 
@@ -153,6 +154,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
         this.testFileService = testFileService;
 
         this.cmisBindingUrl = cmisBindingUrl;
+        this.cmisBindingType = cmisBindingType;
         this.cmisCtx = cmisCtx;
 
         this.eventNameSiteFolderLoaded = EVENT_NAME_SITE_FOLDER_LOADED;
@@ -281,7 +283,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
             List<Event> scheduleEvents = new ArrayList<Event>();
             // Establish the CMIS Session
             super.resumeTimer();
-            Session session = CMIS.startSession(username, password, this.cmisBindingUrl, this.cmisCtx);
+            Session session = CMIS.startSession(username, password, this.cmisBindingType, this.cmisBindingUrl, this.cmisCtx);
             super.suspendTimer();
 
             // Get the folder

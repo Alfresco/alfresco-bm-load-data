@@ -35,13 +35,27 @@ public class CMIS
      * 
      * @return (Session)CMIS session
      */
-    public static Session startSession(String username, String password, String cmisBindingUrl, OperationContext cmisCtx)
+    public static Session startSession(String username, String password, String cmisBindingType, String cmisBindingUrl, OperationContext cmisCtx)
     {
      // Build session parameters
         Map<String, String> parameters = new HashMap<String, String>();
         // Browser binding
-        parameters.put(SessionParameter.BINDING_TYPE, BindingType.BROWSER.value());
-        parameters.put(SessionParameter.BROWSER_URL, cmisBindingUrl);
+        if (cmisBindingType != null && cmisBindingType.equals(BindingType.ATOMPUB.value()))
+        {
+            parameters.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+            parameters.put(SessionParameter.ATOMPUB_URL, cmisBindingUrl);
+        }
+        else if (cmisBindingType != null && cmisBindingType.equals(BindingType.BROWSER.value()))
+        {
+            parameters.put(SessionParameter.BINDING_TYPE, BindingType.BROWSER.value());
+            parameters.put(SessionParameter.BROWSER_URL, cmisBindingUrl);
+        }
+        else
+        {
+            logger.error("Unsupported CMIS binding type: " + cmisBindingType);
+            return null;
+        }
+
         // User
         parameters.put(SessionParameter.USER, username);
         parameters.put(SessionParameter.PASSWORD, password);
