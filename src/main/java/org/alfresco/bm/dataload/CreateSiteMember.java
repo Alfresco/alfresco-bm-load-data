@@ -173,7 +173,7 @@ public class CreateSiteMember extends AbstractEventProcessor
             else
             {
                 // Failure
-                throw new RuntimeException("Create site member as user: " + runAs + " failed : " + siteMember, e);
+                throw new RuntimeException("Create site member as user: " + runAs + " failed (" + e.getStatusCode() + "): " + siteMember, e);
             }
         }
 
