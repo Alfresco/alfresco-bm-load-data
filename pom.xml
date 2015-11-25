@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.alfresco</groupId>
         <artifactId>alfresco-benchmark-tests-common</artifactId>
-        <version>2.3</version>
+        <version>3.0</version>
     </parent>
     <artifactId>alfresco-benchmark-tests-dataload</artifactId>
     <version>2.6-SNAPSHOT</version>
@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <server.version>2.0.10</server.version>
+        <server.version>2.1.1-SNAPSHOT</server.version>
         <publicapi.version>2.0rc1</publicapi.version>
         <junit.version>4.12</junit.version>
 
