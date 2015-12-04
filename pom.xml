@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.alfresco</groupId>
         <artifactId>alfresco-benchmark-tests-common</artifactId>
-        <version>3.0</version>
+        <version>2.3</version>
     </parent>
     <artifactId>alfresco-benchmark-tests-dataload</artifactId>
     <version>2.6-SNAPSHOT</version>
@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <server.version>2.1.1-SNAPSHOT</server.version>
+        <server.version>2.1.1</server.version>
         <publicapi.version>2.0rc1</publicapi.version>
         <junit.version>4.12</junit.version>
 
@@ -67,19 +67,6 @@
         <connection>scm:svn:http://svn.alfresco.com/repos/alfresco-open-mirror/benchmark/tests/dataload/trunk</connection>
         <developerConnection>scm:svn:https://svn.alfresco.com/repos/alfresco-enterprise/benchmark/tests/dataload/trunk</developerConnection>
     </scm>
-    
-    <distributionManagement>
-        <repository>
-            <id>alfresco-internal</id>
-            <name>Alfresco Releases Repository</name>
-            <url>https://artifacts.alfresco.com/nexus/content/repositories/releases</url>
-        </repository>
-        <snapshotRepository>
-            <id>alfresco-internal-snapshots</id>
-            <name>Alfresco Snapshots Repository </name>
-            <url>https://artifacts.alfresco.com/nexus/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
 
     <build>
         <resources>
