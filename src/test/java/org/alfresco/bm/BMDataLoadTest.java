@@ -146,7 +146,7 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
         ResultService resultService = services.getResultService(test, run);
         
         List<String> eventNames = resultService.getEventNames();
-        assertEquals("Missing events.  Have: " + eventNames, 10, eventNames.size());
+        assertEquals("Missing events.  Have: " + eventNames, 11, eventNames.size());
         
         assertEquals("Expected 100 users + RM. ", 101L, userDataService.countUsers(null, DataCreationState.Created));
         assertEquals("Expected 10 sites + RM. ", 11L, siteDataService.countSites(null, null));
