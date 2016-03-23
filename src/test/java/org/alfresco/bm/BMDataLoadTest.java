@@ -77,7 +77,7 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
         mongoHost = new MongoClientURI(uriWithoutDB).getHosts().get(0);
         
         // Connect to the test DB
-        db = new MongoDBFactory(new MongoClient(mongoHost), "bm20-data").getObject();
+        db = new MongoDBFactory(new MongoClient(mongoHost), "bm21-data").getObject();
         
         usersCollection = "mirror.test.users";
         sitesCollection = "mirror.test.sites";
