@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <server.version>2.1.4-SNAPSHOT</server.version>
+        <server.version>2.1.4</server.version>
         <junit.version>4.12</junit.version>
 
         <bm.tomcat.port>9086</bm.tomcat.port>

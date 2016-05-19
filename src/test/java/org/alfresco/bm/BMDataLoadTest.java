@@ -59,6 +59,8 @@ import com.mongodb.MongoClientURI;
 @RunWith(JUnit4.class)
 public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
 {
+    public static final String MONGO_TEST_DATABASE = "bm21-data";
+    
     private MongoDBForTestsFactory mongoDBForTestsFactory;
     private DB db;
     private String uriWithoutDB;
@@ -77,7 +79,7 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
         mongoHost = new MongoClientURI(uriWithoutDB).getHosts().get(0);
         
         // Connect to the test DB
-        db = new MongoDBFactory(new MongoClient(mongoHost), "bm21-data").getObject();
+        db = new MongoDBFactory(new MongoClient(mongoHost), MONGO_TEST_DATABASE).getObject();
         
         usersCollection = "mirror.test.users";
         sitesCollection = "mirror.test.sites";
