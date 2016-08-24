@@ -26,7 +26,6 @@ import org.alfresco.bm.cm.FolderData;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.http.AuthenticatedHttpEventProcessor;
-import org.alfresco.bm.session.SessionService;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
@@ -58,7 +57,6 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
     public static final String URL_LOAD_FILES = "/alfresco/service/api/model/filefolder/load";
     public static final String EVENT_NAME_SITE_FILES_SPOOFED = "siteFilesSpoofed";
     
-    private final SessionService sessionService;
     private final FileFolderService fileFolderService;
     private final UserDataService userDataService;
     private final SiteDataService siteDataService;
@@ -88,7 +86,6 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
             HttpClientProvider httpClientProvider,
             AuthenticationDetailsProvider authenticationDetailsProvider,
             String baseUrl,
-            SessionService sessionService,
             FileFolderService fileFolderService,
             UserDataService userDataService,
             SiteDataService siteDataService,
@@ -98,7 +95,6 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
     {
         super(httpClientProvider, authenticationDetailsProvider, baseUrl);
         
-        this.sessionService = sessionService;
         this.fileFolderService = fileFolderService;
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
@@ -136,7 +132,7 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
         Integer filesToCreate = (Integer) dataObj.get(ScheduleSiteLoaders.FIELD_FILES_TO_CREATE);
         if (context == null || path == null || filesToCreate == null)
         {
-            return new EventResult("Requests data not complete for folder loading: " + dataObj, false);
+            return new EventResult("Request data not complete for folder loading: " + dataObj, false);
         }
         // Get the folder
         FolderData folder = fileFolderService.getFolder(context, path);
@@ -151,18 +147,7 @@ public class SpoofFileLoader extends AuthenticatedHttpEventProcessor
             return new EventResult("Load scheduling should create a session for each loader.", false);
         }
         
-        try
-        {
-            return loadFiles(folder, filesToCreate);
-        }
-        finally
-        {
-            // End the session
-            sessionService.endSession(sessionId);
-            // Clean up the lock
-            String lockedPath = folder.getPath() + "/locked";
-            fileFolderService.deleteFolder(context, lockedPath, false);
-        }
+        return loadFiles(folder, filesToCreate);
     }
     
     private EventResult loadFiles(FolderData folder, int filesToCreate) throws IOException

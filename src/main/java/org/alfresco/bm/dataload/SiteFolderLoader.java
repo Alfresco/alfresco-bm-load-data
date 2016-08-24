@@ -38,7 +38,6 @@ import org.alfresco.bm.event.AbstractEventProcessor;
 import org.alfresco.bm.event.Event;
 import org.alfresco.bm.event.EventResult;
 import org.alfresco.bm.file.TestFileService;
-import org.alfresco.bm.session.SessionService;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
@@ -110,7 +109,6 @@ public class SiteFolderLoader extends AbstractEventProcessor
     public static final double DEFAULT_FILE_RATIO = 0.1;
     public static final long DEFAULT_FILING_DELAY = 100L;
 
-    private final SessionService sessionService;
     private final FileFolderService fileFolderService;
     private final UserDataService userDataService;
     private final SiteDataService siteDataService;
@@ -126,35 +124,32 @@ public class SiteFolderLoader extends AbstractEventProcessor
     /**
      * Constructor
      * 
-     * @param sessionService
-     *            service to close this loader's session
-     * @param fileFolderService
-     *            service to access folders
-     * @param userDataService
-     *            service to access user names and passwords
-     * @param siteDataService
-     *            service to access site details
-     * @param testFileService
-     *            service to access sample documents
-     * @param cmisBindingUrl
-     *            the CMIS <b>browser</b> binding URL
-     * @param cmisCtx
-     *            the operation context for all calls made by the session.
+     * @param fileFolderService                 service to access folders
+     * @param userDataService                   service to access usernames and passwords
+     * @param siteDataService                   service to access site details
+     * @param testFileService                   service to access sample documents
+     * @param cmisBindingType                   the CMIS <b>browser</b> binding type
+     * @param cmisBindingUrl                    the CMIS <b>browser</b> binding URL
+     * @param cmisCtx                           the operation context for all calls made by the session.
      */
-    public SiteFolderLoader(SessionService sessionService, FileFolderService fileFolderService,
-            UserDataService userDataService, SiteDataService siteDataService, TestFileService testFileService,
-            String cmisBindingUrl, String cmisBindingType, OperationContext cmisCtx)
+    public SiteFolderLoader(
+            FileFolderService fileFolderService,
+            UserDataService userDataService,
+            SiteDataService siteDataService,
+            TestFileService testFileService,
+            String cmisBindingType,
+            String cmisBindingUrl,
+            OperationContext cmisCtx)
     {
         super();
 
-        this.sessionService = sessionService;
         this.fileFolderService = fileFolderService;
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
         this.testFileService = testFileService;
 
-        this.cmisBindingUrl = cmisBindingUrl;
         this.cmisBindingType = cmisBindingType;
+        this.cmisBindingUrl = cmisBindingUrl;
         this.cmisCtx = cmisCtx;
 
         this.eventNameSiteFolderLoaded = EVENT_NAME_SITE_FOLDER_LOADED;
@@ -243,7 +238,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
         Integer filesToCreate = (Integer) dataObj.get(ScheduleSiteLoaders.FIELD_FILES_TO_CREATE);
         if (context == null || path == null || foldersToCreate == null || filesToCreate == null)
         {
-            return new EventResult("Requests data not complete for folder loading: " + dataObj, false);
+            return new EventResult("Request data not complete for folder loading: " + dataObj, false);
         }
         // Get the folder
         FolderData folder = fileFolderService.getFolder(context, path);
@@ -258,18 +253,9 @@ public class SiteFolderLoader extends AbstractEventProcessor
             return new EventResult("Load scheduling should create a session for each loader.", false);
         }
 
-        try
-        {
-            return loadFolder(folder, foldersToCreate, filesToCreate); 
-        }
-        finally
-        {
-            // End the session
-            sessionService.endSession(sessionId);
-            // Clean up the lock
-            String lockedPath = folder.getPath() + "/locked";
-            fileFolderService.deleteFolder(context, lockedPath, false);
-        }
+        return loadFolder(
+                folder,
+                foldersToCreate, filesToCreate);        // Formatting is for easier debugging!
     }
 
     private EventResult loadFolder(FolderData folder, int foldersToCreate, int filesToCreate) throws IOException
@@ -283,7 +269,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
             List<Event> scheduleEvents = new ArrayList<Event>();
             // Establish the CMIS Session
             super.resumeTimer();
-            Session session = CMIS.startSession(username, password, this.cmisBindingType, this.cmisBindingUrl, this.cmisCtx);
+            Session session = CMIS.startSession(username, password, cmisBindingType, cmisBindingUrl, cmisCtx);
             super.suspendTimer();
 
             // Get the folder
