@@ -4,41 +4,40 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
+import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
 import org.alfresco.bm.site.SiteRole;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Generate create site member events for site members in the site members collection that are pending creation.
@@ -50,7 +49,7 @@ public class CreateSites extends AbstractEventProcessor
     public static final String DEFAULT_EVENT_NAME_CREATE_SITES = "createSites";
     public static final int DEFAULT_BATCH_SIZE = 100;
     public static final long DEFAULT_SITE_CREATION_DELAY = 100L;
-    
+
     private final SiteDataService siteDataService;
 
     private String eventNameSitesCreated = DEFAULT_EVENT_NAME_SITES_CREATED;
@@ -109,7 +108,7 @@ public class CreateSites extends AbstractEventProcessor
     public EventResult processEvent(Event event) throws Exception
     {
         List<Event> nextEvents = new ArrayList<Event>();
-        
+
         // Schedule events for each site member to be created
         int numSites = 0;
 
@@ -129,12 +128,10 @@ public class CreateSites extends AbstractEventProcessor
                 nextEventTime += siteCreationDelay;
                 // Do we need to schedule it?
                 String siteId = site.getSiteId();
-                
+
                 String siteManager = null;
-                List<SiteMemberData> siteManagers = siteDataService.getSiteMembers(
-                        siteId, DataCreationState.NotScheduled,
-                        SiteRole.SiteManager.toString(),
-                        0, 1);
+                List<SiteMemberData> siteManagers = siteDataService
+                    .getSiteMembers(siteId, DataCreationState.NotScheduled, SiteRole.SiteManager.toString(), 0, 1);
                 if (siteManagers.size() > 0)
                 {
                     siteManager = siteManagers.get(0).getUsername();
@@ -147,13 +144,11 @@ public class CreateSites extends AbstractEventProcessor
                     siteDataService.setSiteCreationState(siteId, null, DataCreationState.Failed);
                     continue;
                 }
-                DBObject dataObj = new BasicDBObject()
-                    .append(CreateSite.FIELD_SITE_ID, siteId)
-                    .append(CreateSite.FIELD_SITE_MANAGER, siteManager);
+                DBObject dataObj = new BasicDBObject().append(CreateSite.FIELD_SITE_ID, siteId).append(CreateSite.FIELD_SITE_MANAGER, siteManager);
                 Event nextEvent = new Event(eventNameCreateSite, nextEventTime, dataObj);
                 nextEvents.add(nextEvent);
                 numSites++;
-                
+
                 // The site creation is now scheduled
                 siteDataService.setSiteCreationState(siteId, null, DataCreationState.Scheduled);
                 siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Scheduled);

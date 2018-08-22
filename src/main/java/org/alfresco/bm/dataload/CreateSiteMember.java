@@ -4,34 +4,35 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload;
 
+import com.mongodb.DBObject;
+import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
-import org.alfresco.bm.event.selector.EventDataObject;
-import org.alfresco.bm.event.selector.EventDataObject.STATUS;
-import org.alfresco.bm.event.selector.EventProcessorResponse;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
+import org.alfresco.bm.driver.event.selector.EventDataObject;
+import org.alfresco.bm.driver.event.selector.EventDataObject.STATUS;
+import org.alfresco.bm.driver.event.selector.EventProcessorResponse;
 import org.alfresco.bm.publicapi.factory.PublicApiFactory;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
@@ -43,11 +44,9 @@ import org.springframework.social.alfresco.api.Alfresco;
 import org.springframework.social.alfresco.api.entities.Role;
 import org.springframework.social.alfresco.connect.exception.AlfrescoException;
 
-import com.mongodb.DBObject;
-
 /**
  * Create a site member.
- * 
+ *
  * @author steveglover
  * @author Derek Hulley
  */
@@ -55,9 +54,9 @@ public class CreateSiteMember extends AbstractEventProcessor
 {
     public static final String FIELD_SITE_ID = "siteId";
     public static final String FIELD_USERNAME = "username";
-    
+
     public static final String DEFAULT_EVENT_NAME_SITE_MEMBER_CREATED = "siteMemberCreated";
-    
+
     private String eventNameSiteMemberCreated = DEFAULT_EVENT_NAME_SITE_MEMBER_CREATED;
 
     private final UserDataService userDataService;
@@ -65,16 +64,16 @@ public class CreateSiteMember extends AbstractEventProcessor
     private PublicApiFactory publicApiFactory;
 
     /**
-     * @param userDataService               access to user data
-     * @param siteDataService               access to site data
-     * @param publicApiFactory              a factory for creating connections to the public api
+     * @param userDataService  access to user data
+     * @param siteDataService  access to site data
+     * @param publicApiFactory a factory for creating connections to the public api
      */
     public CreateSiteMember(UserDataService userDataService, SiteDataService siteDataService, PublicApiFactory publicApiFactory)
     {
         super();
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
-        this.publicApiFactory = publicApiFactory; 
+        this.publicApiFactory = publicApiFactory;
     }
 
     /**
@@ -90,7 +89,7 @@ public class CreateSiteMember extends AbstractEventProcessor
         Alfresco alfresco = publicApiFactory.getPublicApi(userId);
         return alfresco;
     }
-    
+
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
@@ -109,7 +108,7 @@ public class CreateSiteMember extends AbstractEventProcessor
             dataObj.put("msg", "Invalid site member request.");
             return new EventResult(dataObj, false);
         }
-        
+
         // Get the membership data
         SiteMemberData siteMember = siteDataService.getSiteMember(siteId, username);
         if (siteMember == null)
@@ -128,11 +127,9 @@ public class CreateSiteMember extends AbstractEventProcessor
 
         String roleStr = siteMember.getRole();
         Role role = Role.valueOf(roleStr);
-        
+
         // Get a site manager
-        SiteMemberData siteManager = siteDataService.randomSiteMember(
-                siteId, DataCreationState.Created, null,
-                SiteRole.SiteManager.toString());
+        SiteMemberData siteManager = siteDataService.randomSiteMember(siteId, DataCreationState.Created, null, SiteRole.SiteManager.toString());
         if (siteManager == null)
         {
             dataObj.put("msg", "Site does not have a manager: " + siteId);
@@ -146,7 +143,7 @@ public class CreateSiteMember extends AbstractEventProcessor
             return new EventResult(dataObj, false);
         }
         String runAsDomain = runAsData.getDomain();
-        if(UserDataService.DEFAULT_DOMAIN.equalsIgnoreCase(runAsDomain))
+        if (UserDataService.DEFAULT_DOMAIN.equalsIgnoreCase(runAsDomain))
         {
             runAsDomain = String.format("-%s-", runAsDomain);
         }
@@ -155,11 +152,11 @@ public class CreateSiteMember extends AbstractEventProcessor
             Alfresco alfrescoAPI = getPublicApi(runAs);
             alfrescoAPI.addMember(runAsDomain, siteId, username, role);
             siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Created);
-            
+
             siteMember = siteDataService.getSiteMember(siteId, username);
             EventDataObject responseData = new EventDataObject(STATUS.SUCCESS, siteMember);
             response = new EventProcessorResponse("Added site member", true, responseData);
-            
+
             msg = "Created site member: \n" + "   Response: " + response;
             nextEvent = new Event(eventNameSiteMemberCreated, null);
         }
@@ -169,11 +166,11 @@ public class CreateSiteMember extends AbstractEventProcessor
             {
                 // Already a member
                 siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Created);
-                
+
                 siteMember = siteDataService.getSiteMember(siteId, username);
                 EventDataObject responseData = new EventDataObject(STATUS.SUCCESS, siteMember);
                 response = new EventProcessorResponse("Added site member", true, responseData);
-                
+
                 msg = "Site member already exists on server: \n" + "   Response: " + response;
                 nextEvent = new Event(eventNameSiteMemberCreated, null);
             }

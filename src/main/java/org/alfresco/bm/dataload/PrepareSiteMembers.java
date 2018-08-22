@@ -4,34 +4,31 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload;
 
-import java.util.Collections;
-import java.util.List;
-
+import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
@@ -39,12 +36,15 @@ import org.alfresco.bm.site.SiteRole;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Prepares site members for creation by populating the site members collection.
  * <p/>
  * The number of site members to create is driven by the number of sites and the {@link #setUsersPerSite(int) users per site}.
  * maxSites: if -1, uses all created sites in the sites collection maxMembersPerSite: must be greater than 0
- * 
+ *
  * @author steveglover
  * @author Derek Hulley
  */
@@ -52,7 +52,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
 {
     public static final String EVENT_NAME_SITE_MEMBERS_PREPARED = "siteMembersPrepared";
     public static final int DEFAULT_USERS_PER_SITE = 10;
-            
+
     private UserDataService userDataService;
     private SiteDataService siteDataService;
     private String eventNameSiteMembersPrepared;
@@ -60,7 +60,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
     private int usersPerSite;
 
     /**
-     * @param services              data collections
+     * @param services data collections
      */
     public PrepareSiteMembers(UserDataService userDataService, SiteDataService siteDataService)
     {
@@ -99,7 +99,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
 
         long numSites = siteDataService.countSites(null, DataCreationState.Created);
         int siteLoops = ((int) (numSites / sitePageSize) + 1);           // The number of times to query for sites
-        
+
         int userSkip = 0;
         int currentUser = 0;
         final int userPageSize = 100;
@@ -110,7 +110,7 @@ public class PrepareSiteMembers extends AbstractEventProcessor
             return result;
         }
         long userCount = userDataService.countUsers(null, DataCreationState.Created);
-        
+
         for (int siteLoop = 0; siteLoop < siteLoops; siteLoop++)
         {
             // Get the next page of sites

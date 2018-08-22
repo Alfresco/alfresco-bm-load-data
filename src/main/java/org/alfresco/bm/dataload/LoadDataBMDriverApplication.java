@@ -23,27 +23,22 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
-package org.alfresco.bm.dataload.rm.eventprocessor;
+package org.alfresco.bm.dataload;
 
-import java.util.Random;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.ImportResource;
+import org.springframework.context.annotation.PropertySource;
 
-/**
- * Site membership role based on record management site.
- *
- * @author Michael Suzuki
- */
-public enum RMRole
+@SpringBootApplication
+@ComponentScan({ "org.alfresco.bm.dataload", "org.alfresco.management", "org.alfresco.rest", "org.alfresco.utility" })
+@ImportResource({ "classpath:config/spring/app-context.xml", "dataprep-context.xml" })
+@PropertySource({ "classpath:config/startup/app.properties", "classpath:config/startup/mongo.properties", "classpath:dataprep.properties" })
+public class LoadDataBMDriverApplication
 {
-    User,
-    PowerUser,
-    RecordsManager,
-    SecurityOfficer,
-    Administrator;
-
-    private static Random random = new Random();
-
-    public static RMRole getRandomRole()
+    public static void main(String[] args)
     {
-        return values()[random.nextInt(values().length)];
+        SpringApplication.run(LoadDataBMDriverApplication.class, args);
     }
 }

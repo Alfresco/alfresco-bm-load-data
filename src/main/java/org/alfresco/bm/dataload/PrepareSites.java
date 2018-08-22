@@ -4,33 +4,31 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload;
 
-import java.util.Collections;
-
+import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
@@ -39,11 +37,13 @@ import org.alfresco.bm.site.SiteVisibility;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
 
+import java.util.Collections;
+
 /**
  * Prepares sites for creation by populating the sites collection.
  * <p/>
  * The number of sites is driven by: {@link #setSitesPerDomain(int)}
- * 
+ *
  * @author Derek Hulley
  * @since 2.0
  */
@@ -59,13 +59,13 @@ public class PrepareSites extends AbstractEventProcessor
     private String siteFormat;
 
     /**
-     * @param services              data collections
+     * @param services data collections
      */
     public PrepareSites(UserDataService userDataService, SiteDataService siteDataService)
     {
         super();
         this.userDataService = userDataService;
-        this.siteDataService = siteDataService; 
+        this.siteDataService = siteDataService;
         this.eventNameSitesPrepared = EVENT_NAME_SITES_PREPARED;
         this.sitesCount = DEFAULT_SITES_COUNT;
         this.setSiteFormat("Site.%s.%05d");
@@ -97,7 +97,7 @@ public class PrepareSites extends AbstractEventProcessor
         {
             // Start with site number 0
             siteNumber++;
-            
+
             // First choose a random user to be the creator / manager for the site
             UserData user = userDataService.getRandomUser();
             if (user == null)
@@ -106,7 +106,7 @@ public class PrepareSites extends AbstractEventProcessor
             }
             String username = user.getUsername();
             String domain = user.getDomain();
-            
+
             String siteId = String.format(getSiteFormat(), domain, siteNumber);
             SiteData site = siteDataService.getSite(siteId);
             if (site != null)
@@ -138,7 +138,7 @@ public class PrepareSites extends AbstractEventProcessor
             siteDataService.addSite(newSite);
             preparedCount++;
             validSites++;
-            
+
             // Record the user as the site manager
             final SiteMemberData siteMember = new SiteMemberData();
             siteMember.setUsername(username);

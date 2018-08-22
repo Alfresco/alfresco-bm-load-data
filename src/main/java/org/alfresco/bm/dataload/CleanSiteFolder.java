@@ -4,36 +4,35 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload;
 
-import java.io.IOException;
-import java.util.Collections;
-
+import com.mongodb.BasicDBObjectBuilder;
+import com.mongodb.DBObject;
 import org.alfresco.bm.cm.FileFolderService;
 import org.alfresco.bm.cm.FolderData;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
-import org.alfresco.bm.session.SessionService;
+import org.alfresco.bm.common.EventResult;
+import org.alfresco.bm.common.session.SessionService;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
@@ -46,8 +45,8 @@ import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
-import com.mongodb.BasicDBObjectBuilder;
-import com.mongodb.DBObject;
+import java.io.IOException;
+import java.util.Collections;
 
 /**
  * Clean up a loaded folder.
@@ -56,14 +55,14 @@ import com.mongodb.DBObject;
  * get deleted in order to simulate a proportioanl delete load.
  * <p>
  * The test-side lock is released for the folder in any event.
- * 
+ *
  * @author Derek Hulley
  * @since 2.4.1
  */
 public class CleanSiteFolder extends AbstractEventProcessor
 {
     public static final String EVENT_NAME_SITE_FOLDER_CLEANED = "siteFolderCleaned";
-    
+
     private final SessionService sessionService;
     private final FileFolderService fileFolderService;
     private final UserDataService userDataService;
@@ -75,39 +74,31 @@ public class CleanSiteFolder extends AbstractEventProcessor
     private String eventNameSiteFolderCleaned;
 
     /**
-     * 
-     * @param sessionService                    service to close this loader's session
-     * @param fileFolderService                 service to access folders
-     * @param userDataService                   service to access usernames and passwords
-     * @param siteDataService                   service to access site details
-     * @param cmisBindingType                   the CMIS <b>browser</b> binding type
-     * @param cmisBindingUrl                    the CMIS <b>browser</b> binding URL
-     * @param cmisCtx                           the operation context for all calls made by the session.
-     * @param deleteFolderPercentage            the percentage of filled folders to delete
+     * @param sessionService         service to close this loader's session
+     * @param fileFolderService      service to access folders
+     * @param userDataService        service to access usernames and passwords
+     * @param siteDataService        service to access site details
+     * @param cmisBindingType        the CMIS <b>browser</b> binding type
+     * @param cmisBindingUrl         the CMIS <b>browser</b> binding URL
+     * @param cmisCtx                the operation context for all calls made by the session.
+     * @param deleteFolderPercentage the percentage of filled folders to delete
      */
-    public CleanSiteFolder(
-            SessionService sessionService,
-            FileFolderService fileFolderService,
-            UserDataService userDataService,
-            SiteDataService siteDataService,
-            String cmisBindingType,
-            String cmisBindingUrl,
-            OperationContext cmisCtx,
-            int deleteFolderPercentage)
+    public CleanSiteFolder(SessionService sessionService, FileFolderService fileFolderService, UserDataService userDataService, SiteDataService siteDataService,
+        String cmisBindingType, String cmisBindingUrl, OperationContext cmisCtx, int deleteFolderPercentage)
     {
         super();
-        
+
         this.sessionService = sessionService;
         this.fileFolderService = fileFolderService;
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
-        
+
         this.cmisBindingType = cmisBindingType;
         this.cmisBindingUrl = cmisBindingUrl;
         this.cmisCtx = cmisCtx;
-        
+
         this.deleteFolderPercentage = deleteFolderPercentage;
-        
+
         this.eventNameSiteFolderCleaned = EVENT_NAME_SITE_FOLDER_CLEANED;
     }
 
@@ -123,7 +114,7 @@ public class CleanSiteFolder extends AbstractEventProcessor
     public EventResult processEvent(Event event) throws Exception
     {
         super.suspendTimer();
-        
+
         DBObject dataObj = (DBObject) event.getData();
         if (dataObj == null)
         {
@@ -147,12 +138,11 @@ public class CleanSiteFolder extends AbstractEventProcessor
         {
             return new EventResult("Load scheduling should create a session for each loader.", false);
         }
-        
+
         // Determine if we need to delete the folder
-        boolean deleteFolder =
-                    (Math.random() * 100.0 < (double) deleteFolderPercentage) &&
-                    folder.getLevel() >= 4;                                         // Don't delete the documentLibrary of sites or above
-        
+        boolean deleteFolder = (Math.random() * 100.0 < (double) deleteFolderPercentage)
+            && folder.getLevel() >= 4;                                         // Don't delete the documentLibrary of sites or above
+
         try
         {
             return deleteFolder(folder, deleteFolder);
@@ -174,13 +164,13 @@ public class CleanSiteFolder extends AbstractEventProcessor
             sessionService.endSession(sessionId);
         }
     }
-    
+
     private EventResult deleteFolder(FolderData folder, boolean deleteFolder) throws IOException
     {
         UserData user = SiteFolderLoader.getUser(siteDataService, userDataService, folder, logger);
         String username = user.getUsername();
         String password = user.getPassword();
-        
+
         try
         {
             if (deleteFolder)
@@ -189,11 +179,11 @@ public class CleanSiteFolder extends AbstractEventProcessor
                 super.resumeTimer();
                 Session session = CMIS.startSession(username, password, cmisBindingType, cmisBindingUrl, cmisCtx);
                 super.suspendTimer();
-                
+
                 // Get the folder
                 String path = folder.getPath();
                 Folder cmisFolder = FileUtils.getFolder(path, session);
-                
+
                 // Delete folder
                 super.resumeTimer();
                 cmisFolder.deleteTree(true, UnfileObject.DELETE, false);
@@ -201,18 +191,12 @@ public class CleanSiteFolder extends AbstractEventProcessor
             }
 
             // Build next event
-            DBObject eventData = BasicDBObjectBuilder.start()
-                    .add(ScheduleSiteLoaders.FIELD_CONTEXT, folder.getContext())
-                    .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath())
-                    .get();
+            DBObject eventData = BasicDBObjectBuilder.start().add(ScheduleSiteLoaders.FIELD_CONTEXT, folder.getContext())
+                .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath()).get();
             Event nextEvent = new Event(eventNameSiteFolderCleaned, eventData);
-            
-            DBObject resultData = BasicDBObjectBuilder.start()
-                    .add("msg", "Cleaned up folder.")
-                    .add("path", folder.getPath())
-                    .add("deleted", deleteFolder)
-                    .add("username", username)
-                    .get();
+
+            DBObject resultData = BasicDBObjectBuilder.start().add("msg", "Cleaned up folder.").add("path", folder.getPath()).add("deleted", deleteFolder)
+                .add("username", username).get();
             return new EventResult(resultData, Collections.singletonList(nextEvent));
         }
         catch (CmisRuntimeException e)
@@ -220,18 +204,10 @@ public class CleanSiteFolder extends AbstractEventProcessor
             String error = e.getMessage();
             String stack = ExceptionUtils.getStackTrace(e);
             // Grab the CMIS information
-            DBObject data = BasicDBObjectBuilder
-                    .start()
-                    .append("error", error)
-                    .append("binding", cmisBindingUrl)
-                    .append("username", username)
-                    .append("folder", folder)
-                    .append("stack", stack)
-                    .push("cmisFault")
-                        .append("code", "" + e.getCode())               // BigInteger is not Serializable
-                        .append("errorContent", e.getErrorContent())
-                    .pop()
-                    .get();
+            DBObject data = BasicDBObjectBuilder.start().append("error", error).append("binding", cmisBindingUrl).append("username", username)
+                .append("folder", folder).append("stack", stack).push("cmisFault")
+                .append("code", "" + e.getCode())               // BigInteger is not Serializable
+                .append("errorContent", e.getErrorContent()).pop().get();
             // Build failure result
             return new EventResult(data, false);
         }
