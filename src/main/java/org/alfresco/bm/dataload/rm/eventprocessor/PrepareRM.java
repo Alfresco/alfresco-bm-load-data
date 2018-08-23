@@ -4,43 +4,43 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload.rm.eventprocessor;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Event processor that initializes the data such that RM functionality can be used.
- *  
+ *
  * @author Michael Suzuki
  * @author Derek Hulley
  * @version 2.0
@@ -57,7 +57,7 @@ public class PrepareRM extends AbstractEventProcessor
     public static final String RM_SITE_VISIBILITY = "PUBLIC";
 
     public static final String DEFAULT_EVENT_NAME_RM_PREPARED = "rmPrepared";
-    
+
     private final UserDataService userDataService;
     private final SiteDataService siteDataService;
     private final boolean enabled;
@@ -66,15 +66,13 @@ public class PrepareRM extends AbstractEventProcessor
     private String eventNameRMPrepared;
 
     /**
-     * @param userDataService               User data collections
-     * @param siteDataService               collection of site data
-     * @param enabled                       <tt>true</tt> if RM is enabled
-     * @param username                      admin username (can be an RM administrator)
-     * @param password                      admin password
+     * @param userDataService User data collections
+     * @param siteDataService collection of site data
+     * @param enabled         <tt>true</tt> if RM is enabled
+     * @param username        admin username (can be an RM administrator)
+     * @param password        admin password
      */
-    public PrepareRM(
-            UserDataService userDataService, SiteDataService siteDataService,
-            boolean enabled, String username, String password)
+    public PrepareRM(UserDataService userDataService, SiteDataService siteDataService, boolean enabled, String username, String password)
     {
         super();
         this.userDataService = userDataService;
@@ -98,13 +96,13 @@ public class PrepareRM extends AbstractEventProcessor
     {
         StringBuilder msg = new StringBuilder("Preparing Records Management: \n");
         List<Event> events = new ArrayList<Event>(10);
-        
+
         // Do we actually need to do anything
         if (!enabled)
         {
             return new EventResult("Record management data load is disabled.", new Event(eventNameRMPrepared, null));
         }
-        
+
         UserData rmAdmin = userDataService.findUserByUsername(username);
         if (rmAdmin == null)
         {
@@ -124,7 +122,7 @@ public class PrepareRM extends AbstractEventProcessor
                 msg.append("   Updating user " + username + " state to created.\n");
             }
         }
-        
+
         // The RM site must exist
         SiteData rmSite = siteDataService.getSite(RM_SITE_ID);
         if (rmSite == null)
@@ -151,7 +149,7 @@ public class PrepareRM extends AbstractEventProcessor
             siteDataService.addSiteMember(rmAdminMember);
             msg.append("   Added user '" + username + "' RM administrator.\n");
         }
-        
+
         // Last event marks us as done
         events.add(new Event(eventNameRMPrepared, msg.toString()));
         // Done

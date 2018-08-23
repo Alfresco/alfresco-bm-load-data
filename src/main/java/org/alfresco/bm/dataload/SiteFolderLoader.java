@@ -4,47 +4,38 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
+import com.mongodb.BasicDBObject;
+import com.mongodb.BasicDBObjectBuilder;
+import com.mongodb.DBObject;
 import org.alfresco.bm.cm.FileFolderService;
 import org.alfresco.bm.cm.FolderData;
+import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.dataload.rm.eventprocessor.FileRMFile;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
-import org.alfresco.bm.file.TestFileService;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
+import org.alfresco.bm.driver.file.TestFileService;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
@@ -65,9 +56,17 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.BasicDBObjectBuilder;
-import com.mongodb.DBObject;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Schedule the {@link #EVENT_NAME_LOAD_FOLDERS folder} and {@link #EVENT_NAME_LOAD_FILES file} loaders and
@@ -79,19 +78,19 @@ import com.mongodb.DBObject;
  * <p/>
  * Every folder receives the same number of files.<br/>
  * To calculate the number of folders and files:
- * 
+ *
  * <pre>
  *     sites:           the total number of sites
  *     subfolders:      the number of subfolders in each folder (except the last level)
  *     filesPerFolder:  the number of files added to each folder
  *     maxDepth:        the <a href="http://en.wikipedia.org/wiki/Tree_%28data_structure%29">depth</a> of the last level of folders
  *                      of the site document libraries.
- *     
+ *
  *     folders = (sites)*(subfolders^0 + subfolders^1 + subfolders^2 + ... + subfolders^(maxDepth-1))
  *             = (sites)*(    1        +  subfolders  + subfolders^2 + ... + subfolders^(maxDepth-1))
  *     files   = (folders)*(filesPerFolder)
  * </pre>
- * 
+ * <p>
  * Using the test defaults:
  * <ul>
  * <li>sites: 100</li>
@@ -99,14 +98,14 @@ import com.mongodb.DBObject;
  * <li>filesPerFolder: 100</li>
  * <li>maxDepth: 3</li>
  * </ul>
- * 
+ *
  * <pre>
  *     folders = (100)*( 1 + 5 + 25 ) =   3,100
  *     files   = 3100*100             = 310,000
  * </pre>
- * 
+ * <p>
  * TODO: Put on Wiki
- * 
+ *
  * @author Derek Hulley
  * @since 2.0
  */
@@ -130,23 +129,17 @@ public class SiteFolderLoader extends AbstractEventProcessor
 
     /**
      * Constructor
-     * 
-     * @param fileFolderService                 service to access folders
-     * @param userDataService                   service to access usernames and passwords
-     * @param siteDataService                   service to access site details
-     * @param testFileService                   service to access sample documents
-     * @param cmisBindingType                   the CMIS <b>browser</b> binding type
-     * @param cmisBindingUrl                    the CMIS <b>browser</b> binding URL
-     * @param cmisCtx                           the operation context for all calls made by the session.
+     *
+     * @param fileFolderService service to access folders
+     * @param userDataService   service to access usernames and passwords
+     * @param siteDataService   service to access site details
+     * @param testFileService   service to access sample documents
+     * @param cmisBindingType   the CMIS <b>browser</b> binding type
+     * @param cmisBindingUrl    the CMIS <b>browser</b> binding URL
+     * @param cmisCtx           the operation context for all calls made by the session.
      */
-    public SiteFolderLoader(
-            FileFolderService fileFolderService,
-            UserDataService userDataService,
-            SiteDataService siteDataService,
-            TestFileService testFileService,
-            String cmisBindingType,
-            String cmisBindingUrl,
-            OperationContext cmisCtx)
+    public SiteFolderLoader(FileFolderService fileFolderService, UserDataService userDataService, SiteDataService siteDataService,
+        TestFileService testFileService, String cmisBindingType, String cmisBindingUrl, OperationContext cmisCtx)
     {
         super();
 
@@ -166,6 +159,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
 
     /**
      * Override the {@link #EVENT_NAME_SITE_FOLDER_LOADED default} event name
+     *
      * @since 2.6
      */
     public void setEventNameSiteFolderLoaded(String eventNameSiteFolderLoaded)
@@ -184,7 +178,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
 
     /**
      * Enables or disables RM
-     * 
+     *
      * @param rmEnabled
      * @since 2.6
      */
@@ -204,6 +198,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
 
     /**
      * Override the {@link #DEFAULT_FILE_RATIO } default value
+     *
      * @since 2.6
      */
     public void setRmFileRatio(double rmFileRatio)
@@ -222,6 +217,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
 
     /**
      * Override the {@link #DEFAULT_FILING_DELAY } default value
+     *
      * @since 2.6
      */
     public void setRmFileDelay(long rmFileDelay)
@@ -260,9 +256,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
             return new EventResult("Load scheduling should create a session for each loader.", false);
         }
 
-        return loadFolder(
-                folder,
-                foldersToCreate, filesToCreate);        // Formatting is for easier debugging!
+        return loadFolder(folder, foldersToCreate, filesToCreate);        // Formatting is for easier debugging!
     }
 
     private EventResult loadFolder(FolderData folder, int foldersToCreate, int filesToCreate) throws IOException
@@ -294,24 +288,18 @@ public class SiteFolderLoader extends AbstractEventProcessor
             super.suspendTimer();
 
             // Build next event
-            DBObject eventData = BasicDBObjectBuilder.start()
-                    .add(ScheduleSiteLoaders.FIELD_CONTEXT, folder.getContext())
-                    .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath()).get();
+            DBObject eventData = BasicDBObjectBuilder.start().add(ScheduleSiteLoaders.FIELD_CONTEXT, folder.getContext())
+                .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath()).get();
             Event nextEvent = new Event(eventNameSiteFolderLoaded, eventData);
             // add follow-up event
             scheduleEvents.add(nextEvent);
             // add additional events
             scheduleEvents.addAll(eventsForRM);
 
-            DBObject resultData = BasicDBObjectBuilder
-                    .start()
-                    .add("msg", "Created " + foldersToCreate + " folders and " + filesToCreate + " files.")
-                    .add("path", folder.getPath())
-                    .add("folderCount", foldersToCreate)
-                    .add("fileCount", filesToCreate)
-                    .add("docsToFileOnRMCount", eventsForRM.size())
-                    .add("username", username).get();
-                    
+            DBObject resultData = BasicDBObjectBuilder.start().add("msg", "Created " + foldersToCreate + " folders and " + filesToCreate + " files.")
+                .add("path", folder.getPath()).add("folderCount", foldersToCreate).add("fileCount", filesToCreate)
+                .add("docsToFileOnRMCount", eventsForRM.size()).add("username", username).get();
+
             return new EventResult(resultData, scheduleEvents);
         }
         catch (CmisRuntimeException e)
@@ -319,17 +307,9 @@ public class SiteFolderLoader extends AbstractEventProcessor
             String error = e.getMessage();
             String stack = ExceptionUtils.getStackTrace(e);
             // Grab the CMIS information
-            DBObject data = BasicDBObjectBuilder.start()
-                    .append("error", error)
-                    .append("binding", cmisBindingUrl)
-                    .append("username", username)
-                    .append("folder", folder)
-                    .append("stack", stack)
-                    .push("cmisFault")
-                        .append("code", "" + e.getCode()) // BigInteger is not Serializable
-                        .append("errorContent", e.getErrorContent())
-                    .pop()
-                    .get();
+            DBObject data = BasicDBObjectBuilder.start().append("error", error).append("binding", cmisBindingUrl).append("username", username)
+                .append("folder", folder).append("stack", stack).push("cmisFault").append("code", "" + e.getCode()) // BigInteger is not Serializable
+                .append("errorContent", e.getErrorContent()).pop().get();
             // Build failure result
             return new EventResult(data, false);
         }
@@ -359,18 +339,16 @@ public class SiteFolderLoader extends AbstractEventProcessor
     }
 
     /**
-     * @throws IOException
-     *             if the binary could not be uploaded
+     * @throws IOException if the binary could not be uploaded
      */
-    private List<Event> createFiles(Session session, UserData user, FolderData folder, Folder cmisFolder,
-            int filesToCreate) throws IOException
+    private List<Event> createFiles(Session session, UserData user, FolderData folder, Folder cmisFolder, int filesToCreate) throws IOException
     {
         String folderPath = folder.getPath();
         List<Event> nextEvents = new ArrayList<Event>();
 
         // TODO: randomize the file to RM instead
         int rmFileNeeded = (int) (DEFAULT_FILE_RATIO * filesToCreate); // the number of files sent to RM, based on
-                                                                       // DEFAULT_FILE_RATIO
+        // DEFAULT_FILE_RATIO
         int rmFileEventsScheduled = 0;
         for (int i = 0; i < filesToCreate; i++)
         {
@@ -391,8 +369,7 @@ public class SiteFolderLoader extends AbstractEventProcessor
             try
             {
                 long fileLen = file.length();
-                ContentStream cs = new ContentStreamImpl(filename, BigInteger.valueOf(fileLen),
-                        "application/octet-stream", is);
+                ContentStream cs = new ContentStreamImpl(filename, BigInteger.valueOf(fileLen), "application/octet-stream", is);
 
                 newFile = cmisFolder.createDocument(newFileProps, cs, VersioningState.MAJOR);
 
@@ -401,10 +378,8 @@ public class SiteFolderLoader extends AbstractEventProcessor
                     if (rmFileEventsScheduled < rmFileNeeded)
                     {
                         long nextEventTime = System.currentTimeMillis();
-                        DBObject rmData = new BasicDBObject().append(FileRMFile.RM_FILE_PATH_ID, cmisFolder.getPath()
-                                + "/" + filename);
-                        Event nextEvent = new Event(FileRMFile.DEFAULT_EVENT_NAME_RM_FILE, nextEventTime
-                                + getRmFileDelay(), rmData);
+                        DBObject rmData = new BasicDBObject().append(FileRMFile.RM_FILE_PATH_ID, cmisFolder.getPath() + "/" + filename);
+                        Event nextEvent = new Event(FileRMFile.DEFAULT_EVENT_NAME_RM_FILE, nextEventTime + getRmFileDelay(), rmData);
                         nextEvents.add(nextEvent);
                         rmFileEventsScheduled++;
                     }
@@ -440,21 +415,19 @@ public class SiteFolderLoader extends AbstractEventProcessor
      * Attempt to find a user to use.<br/>
      * The site ID will be used to find a valid site manager or collaborator.
      */
-    /* protected */static UserData getUser(SiteDataService siteDataService, UserDataService userDataService,
-            FolderData folder, Log logger)
+    /* protected */
+    static UserData getUser(SiteDataService siteDataService, UserDataService userDataService, FolderData folder, Log logger)
     {
         String folderPath = folder.getPath();
         int idxSites = folderPath.indexOf("/" + CreateSite.PATH_SNIPPET_SITES + "/");
         if (idxSites < 0)
         {
-            throw new IllegalStateException("This test expects to operate on folders within an existing site: "
-                    + folder);
+            throw new IllegalStateException("This test expects to operate on folders within an existing site: " + folder);
         }
         int idxDocLib = folderPath.indexOf("/" + CreateSite.PATH_SNIPPET_DOCLIB);
         if (idxDocLib < 0 || idxDocLib < idxSites)
         {
-            throw new IllegalStateException(
-                    "This test expects to operate on folders within an existing site document library: " + folder);
+            throw new IllegalStateException("This test expects to operate on folders within an existing site document library: " + folder);
         }
         String siteId = folderPath.substring(idxSites + 7, idxDocLib);
         // Check
@@ -463,8 +436,8 @@ public class SiteFolderLoader extends AbstractEventProcessor
         {
             throw new IllegalStateException("Unable to find site '" + siteId + "' taken from folder path: " + folder);
         }
-        SiteMemberData siteMember = siteDataService.randomSiteMember(siteId, DataCreationState.Created, null,
-                SiteRole.SiteManager.toString(), SiteRole.SiteCollaborator.toString());
+        SiteMemberData siteMember = siteDataService
+            .randomSiteMember(siteId, DataCreationState.Created, null, SiteRole.SiteManager.toString(), SiteRole.SiteCollaborator.toString());
         if (siteMember == null)
         {
             throw new IllegalStateException("Unable to find a collaborator or manager for site: " + siteId);

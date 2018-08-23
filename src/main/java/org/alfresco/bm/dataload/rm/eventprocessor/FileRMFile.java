@@ -4,34 +4,34 @@
  * %%
  * Copyright (C) 2005 - 2018 Alfresco Software Limited
  * %%
- * This file is part of the Alfresco software. 
- * If the software was purchased under a paid Alfresco license, the terms of 
- * the paid license agreement will prevail.  Otherwise, the software is 
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
  * provided under the following open source license terms:
- * 
+ *
  * Alfresco is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Alfresco is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.alfresco.bm.dataload.rm.eventprocessor;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import com.google.common.io.Files;
+import com.mongodb.BasicDBObjectBuilder;
+import com.mongodb.DBObject;
+import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.dataload.CreateSite;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.management.CMIS;
@@ -43,13 +43,12 @@ import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 
-import com.google.common.io.Files;
-import com.mongodb.BasicDBObjectBuilder;
-import com.mongodb.DBObject;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Prepare RM files.
- * 
+ *
  * @author Paul Brodner
  */
 public class FileRMFile extends AbstractEventProcessor
@@ -58,7 +57,7 @@ public class FileRMFile extends AbstractEventProcessor
     public static final String DEFAULT_EVENT_NAME_RM_FILE_COMPLETE = "rmFileComplete";
     public static final String RM_FILE_PATH_ID = "docForRmFiling";
     public static final String RM_UNIFIED_RECORDS = "Unfiled Records";
-    
+
     private final String cmisBindingUrl;
     private final String cmisBindingType;
     private final OperationContext cmisCtx;
@@ -68,18 +67,8 @@ public class FileRMFile extends AbstractEventProcessor
     private SiteDataService siteDataService;
     private String eventNameRmFileComplete;
 
-    /**
-     * @param fileFolderService
-     *            service to access folders
-     * @param userDataService
-     *            User data collections
-     * @param siteDataService
-     *            collection of site data
-     * @param rmEnabled
-     *            <tt>true</tt> if RM is enabled
-     */
-    public FileRMFile(SiteDataService siteDataService, String cmisBindingUrl, String cmisBindingType, OperationContext cmisCtx,
-            String username, String password)
+    public FileRMFile(SiteDataService siteDataService, String cmisBindingUrl, String cmisBindingType, OperationContext cmisCtx, String username,
+        String password)
     {
         super();
         this.siteDataService = siteDataService;
@@ -107,8 +96,7 @@ public class FileRMFile extends AbstractEventProcessor
         if (rmSite == null)
         {
             // There is nothing more to do
-            return new EventResult("There is no RM site. There is no 'Filing' process to perform.", new Event(
-                    eventNameRmFileComplete, null));
+            return new EventResult("There is no RM site. There is no 'Filing' process to perform.", new Event(eventNameRmFileComplete, null));
         }
         String rmSiteId = rmSite.getSiteId();
 
@@ -127,8 +115,7 @@ public class FileRMFile extends AbstractEventProcessor
             }
             catch (Exception e)
             {
-                DBObject data = BasicDBObjectBuilder.start().append("Cannot 'file' docs to RM site", e.getMessage())
-                        .get();
+                DBObject data = BasicDBObjectBuilder.start().append("Cannot 'file' docs to RM site", e.getMessage()).get();
                 return new EventResult(data, false);
             }
         }
@@ -139,7 +126,7 @@ public class FileRMFile extends AbstractEventProcessor
      * File can be filed to Record Management site in multiple ways: (@link
      * $https://wiki.alfresco.com/wiki/Filing_and_Declaring_Records) The current solution will file an existing document
      * from Share, declaring it as a Record (i.e. moving into RM_UNIFIED_RECORDS)
-     * 
+     *
      * @param fromFile
      * @param cmisSession
      * @param rmSiteId
@@ -150,13 +137,13 @@ public class FileRMFile extends AbstractEventProcessor
         Document fileFromShare = (Document) cmisSession.getObjectByPath(fromFile);
 
         // Initialize the default Unified Records folder from Record Management
-        String unifiedRecords = "/" + CreateSite.PATH_SNIPPET_SITES + "/" + rmSiteId + "/"
-                + CreateSite.PATH_SNIPPET_DOCLIB + "/" + FileRMFile.RM_UNIFIED_RECORDS;
+        String unifiedRecords =
+            "/" + CreateSite.PATH_SNIPPET_SITES + "/" + rmSiteId + "/" + CreateSite.PATH_SNIPPET_DOCLIB + "/" + FileRMFile.RM_UNIFIED_RECORDS;
         Folder folder = (Folder) cmisSession.getObjectByPath(unifiedRecords);
 
         // the document filed will be a cmis:document
         String rmFileName = Files.getNameWithoutExtension(fromFile); // the name is already random generated and saved
-                                                                     // in documentLibray. Just using it further.
+        // in documentLibray. Just using it further.
 
         // RM related properties
         Map<String, Object> properties = new HashMap<String, Object>();

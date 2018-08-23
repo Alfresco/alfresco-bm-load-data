@@ -1,16 +1,38 @@
+/*
+ * #%L
+ * Alfresco Benchmark Load Data
+ * %%
+ * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * %%
+ * This file is part of the Alfresco software.
+ * If the software was purchased under a paid Alfresco license, the terms of
+ * the paid license agreement will prevail.  Otherwise, the software is
+ * provided under the following open source license terms:
+ *
+ * Alfresco is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Alfresco is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.alfresco.bm.dataload.smf.eventprocessor;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.mongodb.DBObject;
+import org.alfresco.bm.common.EventResult;
+import org.alfresco.bm.common.util.ArgumentCheck;
 import org.alfresco.bm.dataload.CreateSite;
-import org.alfresco.bm.event.AbstractEventProcessor;
-import org.alfresco.bm.event.Event;
-import org.alfresco.bm.event.EventResult;
+import org.alfresco.bm.driver.event.AbstractEventProcessor;
+import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
-import org.alfresco.bm.util.ArgumentCheck;
 import org.alfresco.management.CMIS;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Folder;
@@ -19,66 +41,75 @@ import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.util.FileUtils;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 
-import com.mongodb.DBObject;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Event processor that creates a prepared smart folder root in a site.
- * 
+ *
  * @author Frank Becker
  * @since 2.1.2
  */
 public class CreateSmartFolder extends AbstractEventProcessor
 {
-    /** stores the site data service */
+    /**
+     * stores the site data service
+     */
     private final SiteDataService siteDataService;
-    /** CMIS binding URL */
+    /**
+     * CMIS binding URL
+     */
     private final String cmisBindingUrl;
-    /** CMIS binding type */
+    /**
+     * CMIS binding type
+     */
     private final String cmisBindingType;
-    /** CMIS context */
+    /**
+     * CMIS context
+     */
     private final OperationContext cmisCtx;
-    /** CMIS user name */
+    /**
+     * CMIS user name
+     */
     private final String username;
-    /** CMIS password */
+    /**
+     * CMIS password
+     */
     private final String password;
-    /** name of the smart folder root in the site */
+    /**
+     * name of the smart folder root in the site
+     */
     private final String rootFolderName;
-    /** name of the aspect to add to the new CMIS smart root folder */
+    /**
+     * name of the aspect to add to the new CMIS smart root folder
+     */
     private final String aspectName;
-    /** name of the property to set with the smart folder template */
+    /**
+     * name of the property to set with the smart folder template
+     */
     private final String propertyName;
-    /** event name of event to execute after creating the smart folder */
+    /**
+     * event name of event to execute after creating the smart folder
+     */
     private final String eventNameCreatedSmartFolder;
 
     /**
      * Constructor
-     * 
-     * @param siteDataService
-     *        site data service
-     * @param cmisBindingUrl
-     *        CMIS binding URL
-     * @param cmisBindingType
-     *        CMIS binding type
-     * @param cmisCtx
-     *        CMIS context
-     * @param username
-     *        CMIS user name
-     * @param password
-     *        CMIS password
-     * @param rootFolderName
-     *        name of the smart root folder to create
-     * @param aspectName
-     *        name of the aspect to add to the smart folder root
-     * @param propertyName
-     *        name of the property in aspect to set
-     * @param eventNameCreatedSmartFolder
-     *        name of the next event
+     *
+     * @param siteDataService             site data service
+     * @param cmisBindingUrl              CMIS binding URL
+     * @param cmisBindingType             CMIS binding type
+     * @param cmisCtx                     CMIS context
+     * @param username                    CMIS user name
+     * @param password                    CMIS password
+     * @param rootFolderName              name of the smart root folder to create
+     * @param aspectName                  name of the aspect to add to the smart folder root
+     * @param propertyName                name of the property in aspect to set
+     * @param eventNameCreatedSmartFolder name of the next event
      */
-    public CreateSmartFolder(SiteDataService siteDataService,
-            String cmisBindingUrl, String cmisBindingType,
-            OperationContext cmisCtx, String username, String password,
-            String rootFolderName, String aspectName, String propertyName,
-            String eventNameCreatedSmartFolder)
+    public CreateSmartFolder(SiteDataService siteDataService, String cmisBindingUrl, String cmisBindingType, OperationContext cmisCtx, String username,
+        String password, String rootFolderName, String aspectName, String propertyName, String eventNameCreatedSmartFolder)
     {
         this.siteDataService = siteDataService;
         this.cmisBindingUrl = cmisBindingUrl;
@@ -99,8 +130,7 @@ public class CreateSmartFolder extends AbstractEventProcessor
         ArgumentCheck.checkMandatoryString(rootFolderName, "rootFolderName");
         ArgumentCheck.checkMandatoryString(aspectName, "aspectName");
         ArgumentCheck.checkMandatoryString(propertyName, "propertyName");
-        ArgumentCheck.checkMandatoryString(eventNameCreatedSmartFolder,
-                "eventNameCreatedSmartFolder");
+        ArgumentCheck.checkMandatoryString(eventNameCreatedSmartFolder, "eventNameCreatedSmartFolder");
     }
 
     @Override
@@ -109,19 +139,16 @@ public class CreateSmartFolder extends AbstractEventProcessor
         // get site ID and JSON template nodeRef values from event data
         DBObject eventData = (DBObject) event.getData();
         String siteId = (String) eventData.get(SiteData.FIELD_SITE_ID);
-        String nodeRefTemplate = (String) eventData
-                .get(PrepareSmartFolders.NODE_REF);
+        String nodeRefTemplate = (String) eventData.get(PrepareSmartFolders.NODE_REF);
 
         // get site from site service
         SiteData site = this.siteDataService.getSite(siteId);
 
         // create CMIS session
-        Session cmisSession = CMIS.startSession(username, password,
-                cmisBindingType, cmisBindingUrl, cmisCtx);
+        Session cmisSession = CMIS.startSession(username, password, cmisBindingType, cmisBindingUrl, cmisCtx);
 
         // get the path to the site's document library
-        String siteDocLibPath = "/" + CreateSite.PATH_SNIPPET_SITES + "/"
-                + siteId + "/" + CreateSite.PATH_SNIPPET_DOCLIB;
+        String siteDocLibPath = "/" + CreateSite.PATH_SNIPPET_SITES + "/" + siteId + "/" + CreateSite.PATH_SNIPPET_DOCLIB;
         Folder cmisFolder = FileUtils.getFolder(siteDocLibPath, cmisSession);
 
         // check if folder already exists
@@ -132,8 +159,7 @@ public class CreateSmartFolder extends AbstractEventProcessor
             folder = FileUtils.getObject(newFolderPath, cmisSession);
             if (logger.isDebugEnabled())
             {
-                logger.debug("Smart folder root alredy exsits in site '"
-                        + siteId + "'.");
+                logger.debug("Smart folder root alredy exsits in site '" + siteId + "'.");
             }
         }
         catch (Exception e)
@@ -141,10 +167,7 @@ public class CreateSmartFolder extends AbstractEventProcessor
             // ignore
             if (logger.isDebugEnabled())
             {
-                logger.debug(
-                        "Site '" + siteId
-                                + "' doesn't contain a smart folder root .... will be created",
-                        e);
+                logger.debug("Site '" + siteId + "' doesn't contain a smart folder root .... will be created", e);
             }
         }
 
@@ -152,12 +175,10 @@ public class CreateSmartFolder extends AbstractEventProcessor
         Map<String, String> newFolderProps = new HashMap<String, String>();
         newFolderProps.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
         newFolderProps.put(PropertyIds.NAME, this.rootFolderName);
-        Folder newFolder = (null == folder)
-                ? cmisFolder.createFolder(newFolderProps) : (Folder) folder;
+        Folder newFolder = (null == folder) ? cmisFolder.createFolder(newFolderProps) : (Folder) folder;
 
         // add aspect
-        List<Object> aspects = newFolder
-                .getProperty(PropertyIds.SECONDARY_OBJECT_TYPE_IDS).getValues();
+        List<Object> aspects = newFolder.getProperty(PropertyIds.SECONDARY_OBJECT_TYPE_IDS).getValues();
         if (!aspects.contains(this.aspectName))
         {
             aspects.add(this.aspectName);
@@ -172,11 +193,7 @@ public class CreateSmartFolder extends AbstractEventProcessor
         newFolder.updateProperties(props);
 
         // return value
-        String msg = "Successfully created smart folder root '"
-                + this.rootFolderName
-                + "' in site ' "
-                + site.getTitle()
-                + "''.";
+        String msg = "Successfully created smart folder root '" + this.rootFolderName + "' in site ' " + site.getTitle() + "''.";
         Event retEvt = new Event(this.eventNameCreatedSmartFolder, eventData);
         EventResult result = new EventResult(msg, retEvt);
         if (logger.isDebugEnabled())
