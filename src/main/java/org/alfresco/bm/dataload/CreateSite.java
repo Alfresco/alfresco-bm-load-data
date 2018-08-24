@@ -27,7 +27,6 @@ package org.alfresco.bm.dataload;
 
 import com.mongodb.DBObject;
 import org.alfresco.bm.AbstractRestApiEventProcessor;
-import org.alfresco.bm.RestApiUtils;
 import org.alfresco.bm.cm.FileFolderService;
 import org.alfresco.bm.cm.FolderData;
 import org.alfresco.bm.common.EventResult;
@@ -35,11 +34,11 @@ import org.alfresco.bm.data.DataCreationState;
 import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
+import org.alfresco.dataprep.SiteService;
 import org.alfresco.rest.model.RestErrorModel;
 import org.alfresco.rest.model.RestSiteModel;
 import org.alfresco.utility.model.SiteModel;
 import org.alfresco.utility.model.UserModel;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -105,7 +104,7 @@ public class CreateSite extends AbstractRestApiEventProcessor
         SiteModel siteModel = new SiteModel();
         siteModel.setId(siteId);
         siteModel.setTitle(siteId);
-        siteModel.setVisibility(RestApiUtils.getVisibility(site));
+        siteModel.setVisibility(SiteService.Visibility.valueOf(site.getVisibility()));
 
         UserModel userModel = new UserModel();
         userModel.setUsername(siteManager);

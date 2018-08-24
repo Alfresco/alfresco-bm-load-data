@@ -26,23 +26,25 @@
 package org.alfresco.bm.dataload;
 
 import com.mongodb.DBObject;
+import org.alfresco.bm.AbstractRestApiEventProcessor;
 import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.driver.event.AbstractEventProcessor;
 import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.driver.event.selector.EventDataObject;
 import org.alfresco.bm.driver.event.selector.EventDataObject.STATUS;
 import org.alfresco.bm.driver.event.selector.EventProcessorResponse;
-import org.alfresco.bm.publicapi.factory.PublicApiFactory;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteMemberData;
 import org.alfresco.bm.site.SiteRole;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
+import org.alfresco.rest.model.RestErrorModel;
+import org.alfresco.rest.model.RestSiteMemberModel;
+import org.alfresco.utility.constants.UserRole;
+import org.alfresco.utility.model.SiteModel;
+import org.alfresco.utility.model.UserModel;
 import org.springframework.http.HttpStatus;
-import org.springframework.social.alfresco.api.Alfresco;
-import org.springframework.social.alfresco.api.entities.Role;
-import org.springframework.social.alfresco.connect.exception.AlfrescoException;
+
 
 /**
  * Create a site member.
@@ -50,7 +52,7 @@ import org.springframework.social.alfresco.connect.exception.AlfrescoException;
  * @author steveglover
  * @author Derek Hulley
  */
-public class CreateSiteMember extends AbstractEventProcessor
+public class CreateSiteMember extends AbstractRestApiEventProcessor
 {
     public static final String FIELD_SITE_ID = "siteId";
     public static final String FIELD_USERNAME = "username";
@@ -61,19 +63,16 @@ public class CreateSiteMember extends AbstractEventProcessor
 
     private final UserDataService userDataService;
     private final SiteDataService siteDataService;
-    private PublicApiFactory publicApiFactory;
 
     /**
-     * @param userDataService  access to user data
-     * @param siteDataService  access to site data
-     * @param publicApiFactory a factory for creating connections to the public api
+     * @param userDataService access to user data
+     * @param siteDataService access to site data
      */
-    public CreateSiteMember(UserDataService userDataService, SiteDataService siteDataService, PublicApiFactory publicApiFactory)
+    public CreateSiteMember(UserDataService userDataService, SiteDataService siteDataService)
     {
         super();
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
-        this.publicApiFactory = publicApiFactory;
     }
 
     /**
@@ -84,15 +83,10 @@ public class CreateSiteMember extends AbstractEventProcessor
         this.eventNameSiteMemberCreated = eventNameSiteMemberCreated;
     }
 
-    private Alfresco getPublicApi(String userId) throws Exception
-    {
-        Alfresco alfresco = publicApiFactory.getPublicApi(userId);
-        return alfresco;
-    }
-
     @Override
     public EventResult processEvent(Event event) throws Exception
     {
+        suspendTimer();
         DBObject dataObj = (DBObject) event.getData();
         String siteId = (String) dataObj.get(FIELD_SITE_ID);
         String username = (String) dataObj.get(FIELD_USERNAME);
@@ -126,7 +120,6 @@ public class CreateSiteMember extends AbstractEventProcessor
         siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Failed);
 
         String roleStr = siteMember.getRole();
-        Role role = Role.valueOf(roleStr);
 
         // Get a site manager
         SiteMemberData siteManager = siteDataService.randomSiteMember(siteId, DataCreationState.Created, null, SiteRole.SiteManager.toString());
@@ -142,51 +135,64 @@ public class CreateSiteMember extends AbstractEventProcessor
             dataObj.put("msg", "Site manager does not have a user entry: " + runAs);
             return new EventResult(dataObj, false);
         }
-        String runAsDomain = runAsData.getDomain();
-        if (UserDataService.DEFAULT_DOMAIN.equalsIgnoreCase(runAsDomain))
+
+        UserModel runAsUser = new UserModel();
+        runAsUser.setUsername(runAsData.getUsername());
+        runAsUser.setPassword(runAsData.getPassword());
+        //runAsUser.setDomain(runAsDomain);
+
+        SiteModel site = new SiteModel();
+        site.setId(siteId);
+
+        UserRole role = UserRole.valueOf(roleStr);
+
+        UserModel newMember = new UserModel();
+        newMember.setUsername(username);
+        newMember.setUserRole(role);
+
+        resumeTimer();
+        RestSiteMemberModel restSiteMemberModel = getRestWrapper().authenticateUser(runAsUser).withCoreAPI().usingSite(site).addPerson(newMember);
+        suspendTimer();
+        String statusCode = getRestWrapper().getStatusCode();
+        if (HttpStatus.CREATED.toString().equals(statusCode))
         {
-            runAsDomain = String.format("-%s-", runAsDomain);
+            siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Created);
+            siteMember = siteDataService.getSiteMember(siteId, username);
+            EventDataObject responseData = new EventDataObject(STATUS.SUCCESS, siteMember);
+            response = new EventProcessorResponse(
+                "Added member: " + restSiteMemberModel.getPerson().getId() + " to site: " + restSiteMemberModel.getId() + " as: " + restSiteMemberModel
+                    .getRole(), true, responseData);
+
+            msg = "Created site member: \n" + "   Response: " + response;
+            nextEvent = new Event(eventNameSiteMemberCreated, null);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(msg);
+            }
+
+            EventResult result = new EventResult(msg, nextEvent);
+            return result;
         }
-        try
+        else if (HttpStatus.CONFLICT.toString().equals(statusCode))
         {
-            Alfresco alfrescoAPI = getPublicApi(runAs);
-            alfrescoAPI.addMember(runAsDomain, siteId, username, role);
+            // Already a member
             siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Created);
 
             siteMember = siteDataService.getSiteMember(siteId, username);
             EventDataObject responseData = new EventDataObject(STATUS.SUCCESS, siteMember);
             response = new EventProcessorResponse("Added site member", true, responseData);
 
-            msg = "Created site member: \n" + "   Response: " + response;
+            msg = "Site member already exists on server: \n" + "   Response: " + response;
             nextEvent = new Event(eventNameSiteMemberCreated, null);
+            EventResult result = new EventResult(msg, nextEvent);
+            return result;
         }
-        catch (AlfrescoException e)
+        else
         {
-            if (e.getStatusCode().equals(HttpStatus.CONFLICT))
-            {
-                // Already a member
-                siteDataService.setSiteMemberCreationState(siteId, username, DataCreationState.Created);
-
-                siteMember = siteDataService.getSiteMember(siteId, username);
-                EventDataObject responseData = new EventDataObject(STATUS.SUCCESS, siteMember);
-                response = new EventProcessorResponse("Added site member", true, responseData);
-
-                msg = "Site member already exists on server: \n" + "   Response: " + response;
-                nextEvent = new Event(eventNameSiteMemberCreated, null);
-            }
-            else
-            {
-                // Failure
-                throw new RuntimeException("Create site member as user: " + runAs + " failed (" + e.getStatusCode() + "): " + siteMember, e);
-            }
+            // Failure
+            final RestErrorModel restErrorModel = getRestWrapper().assertLastError();
+            final String detailedError = (restErrorModel != null) ? restErrorModel.toString() : "<nothing>";
+            throw new RuntimeException("Create site member as user: " + runAs + " failed (" + statusCode + ") for: " + username + " . Error: " + detailedError);
         }
-
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(msg);
-        }
-
-        EventResult result = new EventResult(msg, nextEvent);
-        return result;
     }
 }
