@@ -132,7 +132,7 @@ public class CreateSite extends AbstractRestApiEventProcessor
                 "", "/" + PATH_SNIPPET_SITES + "/" + siteId + "/" + PATH_SNIPPET_DOCLIB, 0L, 0L);
             fileFolderService.createNewFolder(docLib);
 
-            String msg = "Created site: " + createdSite.getId() + " guid: " + guid + " SiteManager: " + createdSite.;
+            String msg = "Created site: " + createdSite.getId() + " guid: " + guid + " SiteManager: " + siteManager;
             event = new Event(eventNameSiteCreated, null);
 
             if (logger.isDebugEnabled())
