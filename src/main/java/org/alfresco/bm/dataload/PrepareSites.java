@@ -68,7 +68,7 @@ public class PrepareSites extends AbstractEventProcessor
         this.siteDataService = siteDataService;
         this.eventNameSitesPrepared = EVENT_NAME_SITES_PREPARED;
         this.sitesCount = DEFAULT_SITES_COUNT;
-        this.setSiteFormat("Site.%s.%05d");
+        this.setSiteFormat("Site-%s-%05d");
     }
 
     /**

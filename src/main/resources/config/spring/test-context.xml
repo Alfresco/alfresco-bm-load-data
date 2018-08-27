@@ -29,8 +29,8 @@
 
     <bean id="authenticationDetailsProvider" class="org.alfresco.bm.http.UserDataAutheticationDetailsProvider">
         <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="adminUserName" value="${alfresco.admin.user}"/>
-        <constructor-arg name="adminPassword" value="${alfresco.admin.pwd}"/>
+        <constructor-arg name="adminUserName" value="${alfresco.adminUser}"/>
+        <constructor-arg name="adminPassword" value="${alfresco.adminPwd}"/>
     </bean>
 
     <!-- API factories -->
@@ -115,7 +115,7 @@
     <bean id="event.createSite" class="org.alfresco.bm.dataload.CreateSite" parent="event.base">
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <constructor-arg name="fileFolderService" ref="fileFolderService"/>
-        <constructor-arg name="publicApiFactory" ref="publicApiFactory"/>
+        <property name="baseUrl" value="${alfresco.url}"/>
     </bean>
     <bean id="producer.siteCreated" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer" parent="producer.base"/>
 
@@ -149,7 +149,7 @@
     <bean id="event.createSiteMember" class="org.alfresco.bm.dataload.CreateSiteMember" parent="event.base">
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <constructor-arg name="publicApiFactory" ref="publicApiFactory"/>
+        <property name="baseUrl" value="${alfresco.url}"/>
     </bean>
 
     <bean id="producer.siteMemberCreated" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
@@ -157,7 +157,7 @@
 
     <!--                    -->
     <!-- Smart Folders      -->
-    <!--                    -->
+    <!--
     <bean id="producer.siteMembersCreated" class="org.alfresco.bm.driver.event.producer.RedirectEventProducer"
           parent="producer.base">
         <constructor-arg name="newEventName" value="prepareSmartFolders"/>
@@ -169,8 +169,8 @@
         <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
         <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
         <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
-        <constructor-arg name="username" value="${alfresco.admin.user}"/>
-        <constructor-arg name="password" value="${alfresco.admin.pwd}"/>
+        <constructor-arg name="username" value="${alfresco.adminUser}"/>
+        <constructor-arg name="password" value="${alfresco.adminPwd}"/>
         <constructor-arg name="smfTemplatePath" value="${smf.template}"/>
         <constructor-arg name="smfRatio" value="${smf.siteRatio}"/>
         <constructor-arg name="createSmartFolderEvent" value="createSmartFolders"/>
@@ -182,8 +182,8 @@
         <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
         <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
         <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
-        <constructor-arg name="username" value="${alfresco.admin.user}"/>
-        <constructor-arg name="password" value="${alfresco.admin.pwd}"/>
+        <constructor-arg name="username" value="${alfresco.adminUser}"/>
+        <constructor-arg name="password" value="${alfresco.adminPwd}"/>
         <constructor-arg name="rootFolderName" value="${smf.siteRootSFName}"/>
         <constructor-arg name="aspectName" value="${smf.aspectName}"/>
         <constructor-arg name="propertyName" value="${smf.propertyName}"/>
@@ -191,7 +191,7 @@
     </bean>
     <bean id="producer.createdSmartFolder" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
           parent="producer.base"/>
-
+ -->
     <!--                    -->
     <!-- RM                 -->
     <!--                    -->
