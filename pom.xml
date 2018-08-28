@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>alfresco-bm-load-data</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>3.0-SNAPSHOT</version>
     <name>Alfresco Benchmark Load Data Driver</name>
     <packaging>jar</packaging>
 
@@ -62,17 +62,6 @@
             <groupId>org.alfresco.tas</groupId>
             <artifactId>restapi-test</artifactId>
             <version>5.2.0-12-SNAPSHOT</version>
-        </dependency>
-        <!-- TODO remove this once we will use only REST V1 calls -->
-        <dependency>
-            <groupId>org.apache.chemistry.opencmis</groupId>
-            <artifactId>chemistry-opencmis-client-impl</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>xml-apis</groupId>
-            <artifactId>xml-apis</artifactId>
-            <version>1.4.01</version>
         </dependency>
 
         <!-- TODO remove this dependency -->

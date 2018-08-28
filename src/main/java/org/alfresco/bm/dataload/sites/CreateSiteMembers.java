@@ -23,7 +23,7 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
-package org.alfresco.bm.dataload;
+package org.alfresco.bm.dataload.sites;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;

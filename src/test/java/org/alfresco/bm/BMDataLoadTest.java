@@ -35,8 +35,8 @@ import org.alfresco.bm.common.util.junit.tools.BMTestRunner;
 import org.alfresco.bm.common.util.junit.tools.BMTestRunnerListenerAdaptor;
 import org.alfresco.bm.common.util.junit.tools.MongoDBForTestsFactory;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.dataload.CreateSiteMembers;
-import org.alfresco.bm.dataload.CreateSites;
+import org.alfresco.bm.dataload.sites.CreateSiteMembers;
+import org.alfresco.bm.dataload.sites.CreateSites;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.site.SiteDataServiceImpl;
 import org.alfresco.bm.user.UserData;
@@ -135,7 +135,6 @@ public class BMDataLoadTest extends BMTestRunnerListenerAdaptor
         props.setProperty("mirror.users", usersCollection);
         props.setProperty("mirror.sites", sitesCollection);
         props.setProperty("mirror.siteMembers", siteMembersCollection);
-        props.setProperty("rm.enabled", "true");
         props.setProperty("load.sitesCount", "10");
         props.setProperty("load.usersPerSite", "10");
 

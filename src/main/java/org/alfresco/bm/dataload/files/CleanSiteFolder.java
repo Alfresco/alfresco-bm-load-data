@@ -23,27 +23,23 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
-package org.alfresco.bm.dataload;
+package org.alfresco.bm.dataload.files;
 
 import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBObject;
+import org.alfresco.bm.AbstractRestApiEventProcessor;
 import org.alfresco.bm.cm.FileFolderService;
 import org.alfresco.bm.cm.FolderData;
 import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.common.session.SessionService;
-import org.alfresco.bm.driver.event.AbstractEventProcessor;
 import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.bm.user.UserData;
 import org.alfresco.bm.user.UserDataService;
-import org.alfresco.management.CMIS;
-import org.apache.chemistry.opencmis.client.api.Folder;
-import org.apache.chemistry.opencmis.client.api.OperationContext;
-import org.apache.chemistry.opencmis.client.api.Session;
-import org.apache.chemistry.opencmis.client.util.FileUtils;
-import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
-import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.alfresco.rest.core.RestWrapper;
+import org.alfresco.rest.model.RestErrorModel;
+import org.alfresco.utility.model.UserModel;
+import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -59,7 +55,7 @@ import java.util.Collections;
  * @author Derek Hulley
  * @since 2.4.1
  */
-public class CleanSiteFolder extends AbstractEventProcessor
+public class CleanSiteFolder extends AbstractRestApiEventProcessor
 {
     public static final String EVENT_NAME_SITE_FOLDER_CLEANED = "siteFolderCleaned";
 
@@ -67,9 +63,6 @@ public class CleanSiteFolder extends AbstractEventProcessor
     private final FileFolderService fileFolderService;
     private final UserDataService userDataService;
     private final SiteDataService siteDataService;
-    private final String cmisBindingType;
-    private final String cmisBindingUrl;
-    private final OperationContext cmisCtx;
     private final int deleteFolderPercentage;
     private String eventNameSiteFolderCleaned;
 
@@ -78,13 +71,10 @@ public class CleanSiteFolder extends AbstractEventProcessor
      * @param fileFolderService      service to access folders
      * @param userDataService        service to access usernames and passwords
      * @param siteDataService        service to access site details
-     * @param cmisBindingType        the CMIS <b>browser</b> binding type
-     * @param cmisBindingUrl         the CMIS <b>browser</b> binding URL
-     * @param cmisCtx                the operation context for all calls made by the session.
      * @param deleteFolderPercentage the percentage of filled folders to delete
      */
     public CleanSiteFolder(SessionService sessionService, FileFolderService fileFolderService, UserDataService userDataService, SiteDataService siteDataService,
-        String cmisBindingType, String cmisBindingUrl, OperationContext cmisCtx, int deleteFolderPercentage)
+        int deleteFolderPercentage)
     {
         super();
 
@@ -92,10 +82,6 @@ public class CleanSiteFolder extends AbstractEventProcessor
         this.fileFolderService = fileFolderService;
         this.userDataService = userDataService;
         this.siteDataService = siteDataService;
-
-        this.cmisBindingType = cmisBindingType;
-        this.cmisBindingUrl = cmisBindingUrl;
-        this.cmisCtx = cmisCtx;
 
         this.deleteFolderPercentage = deleteFolderPercentage;
 
@@ -171,45 +157,48 @@ public class CleanSiteFolder extends AbstractEventProcessor
         String username = user.getUsername();
         String password = user.getPassword();
 
-        try
+        if (deleteFolder)
         {
-            if (deleteFolder)
+            //we need a user
+            UserModel userModel = new UserModel();
+            userModel.setUsername(username);
+            userModel.setPassword(password);
+
+            try
             {
-                // Establish the CMIS Session
-                super.resumeTimer();
-                Session session = CMIS.startSession(username, password, cmisBindingType, cmisBindingUrl, cmisCtx);
-                super.suspendTimer();
+                RestWrapper restWrapper = getRestWrapper();
+                resumeTimer();
+                restWrapper.authenticateUser(userModel).withCoreAPI().usingNode().deleteNode(folder.getId());
+                suspendTimer();
 
-                // Get the folder
-                String path = folder.getPath();
-                Folder cmisFolder = FileUtils.getFolder(path, session);
-
-                // Delete folder
-                super.resumeTimer();
-                cmisFolder.deleteTree(true, UnfileObject.DELETE, false);
-                super.suspendTimer();
+                if (!HttpStatus.NO_CONTENT.toString().equalsIgnoreCase(restWrapper.getStatusCode()))
+                {
+                    // for some reason we couldn't delete it
+                    DBObject data = BasicDBObjectBuilder.start().append("statusCode", restWrapper.getStatusCode())
+                        .append("error", getRestCallErrorMessage(restWrapper)).append("username", username).append("folderID", folder.getId()).get();
+                    return new EventResult(data, false);
+                }
             }
-
-            // Build next event
-            DBObject eventData = BasicDBObjectBuilder.start().add(ScheduleSiteLoaders.FIELD_CONTEXT, folder.getContext())
-                .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath()).get();
-            Event nextEvent = new Event(eventNameSiteFolderCleaned, eventData);
-
-            DBObject resultData = BasicDBObjectBuilder.start().add("msg", "Cleaned up folder.").add("path", folder.getPath()).add("deleted", deleteFolder)
-                .add("username", username).get();
-            return new EventResult(resultData, Collections.singletonList(nextEvent));
+            catch (Exception e)
+            {
+                throw new RuntimeException("Failed to delete folder: " + folder.getId() + " . Exception: " + e.getMessage(), e);
+            }
         }
-        catch (CmisRuntimeException e)
-        {
-            String error = e.getMessage();
-            String stack = ExceptionUtils.getStackTrace(e);
-            // Grab the CMIS information
-            DBObject data = BasicDBObjectBuilder.start().append("error", error).append("binding", cmisBindingUrl).append("username", username)
-                .append("folder", folder).append("stack", stack).push("cmisFault")
-                .append("code", "" + e.getCode())               // BigInteger is not Serializable
-                .append("errorContent", e.getErrorContent()).pop().get();
-            // Build failure result
-            return new EventResult(data, false);
-        }
+
+        // Build next event
+        DBObject eventData = BasicDBObjectBuilder.start().add(ScheduleSiteLoaders.FIELD_CONTEXT, folder.getContext())
+            .add(ScheduleSiteLoaders.FIELD_PATH, folder.getPath()).get();
+        Event nextEvent = new Event(eventNameSiteFolderCleaned, eventData);
+
+        DBObject resultData = BasicDBObjectBuilder.start().add("msg", "Cleaned up folder.").add("path", folder.getPath()).add("deleted", deleteFolder)
+            .add("username", username).get();
+        return new EventResult(resultData, Collections.singletonList(nextEvent));
+
+    }
+
+    private String getRestCallErrorMessage(RestWrapper restWrapper)
+    {
+        RestErrorModel restErrorModel = restWrapper.assertLastError();
+        return restErrorModel != null ? restErrorModel.toString() : "<nothing>";
     }
 }
