@@ -3,14 +3,12 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
-    <!--
-        bm-dataload: [Project description]
-     -->
 
     <!-- Import any application contexts for test runs -->
     <import resource="classpath:config/spring/test-common-context.xml"/>
     <import resource="classpath:config/spring/test-http-context.xml"/>
 
+    <!-- Services used -->
     <bean id="userDataService" class="org.alfresco.bm.user.UserDataServiceImpl">
         <constructor-arg name="db" ref="testMongoDB"/>
         <constructor-arg name="collection" value="${mirror.users}"/>
@@ -33,43 +31,9 @@
         <constructor-arg name="adminPassword" value="${alfresco.adminPwd}"/>
     </bean>
 
-    <!-- API factories -->
-
-    <bean id="publicApiFactory" class="org.alfresco.bm.publicapi.factory.BasicAuthPublicApiFactory">
-        <constructor-arg name="scheme" value="${alfresco.scheme}"/>
-        <constructor-arg name="host" value="${alfresco.server}"/>
-        <constructor-arg name="port" value="${alfresco.port}"/>
-        <constructor-arg name="preferredCMISEndPoint">
-            <null/>
-        </constructor-arg>
-        <constructor-arg name="maxNumberOfConnections" value="${http.connection.max}"/>
-        <constructor-arg name="connectionTimeoutMs" value="${http.connection.timeoutMs}"/>
-        <constructor-arg name="socketTimeoutMs" value="${http.socket.timeoutMs}"/>
-        <constructor-arg name="socketTtlMs" value="${http.socket.ttlMs}"/>
-        <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="context" value="${alfresco.context}"/>
-        <constructor-arg name="publicApiServletName" value="${alfresco.apiServletName}"/>
-        <constructor-arg name="serviceServletName" value="${alfresco.serviceServletName}"/>
-    </bean>
-
-    <bean id="cmis.opCtx" class="org.apache.chemistry.opencmis.client.runtime.OperationContextImpl">
-        <property name="cacheEnabled" value="true"/>
-        <property name="filterString" value=""/>
-        <property name="includeAcls" value="false"/>
-        <property name="includeAllowableActions" value="false"/>
-        <property name="includePathSegments" value="false"/>
-        <property name="includePolicies" value="false"/>
-        <property name="includeRelationships" value="NONE"/>
-        <property name="loadSecondaryTypeProperties" value="false"/>
-        <property name="maxItemsPerPage" value="100"/>
-        <property name="orderBy" value="cmis:name ASC"/>
-        <property name="renditionFilterString" value=""/>
-    </bean>
-
     <!--                 -->
     <!-- Test Files      -->
     <!--                 -->
-
     <bean id="fileDataService" class="org.alfresco.bm.driver.file.FileDataServiceImpl">
         <constructor-arg name="db" ref="testMongoDB"/>
         <constructor-arg name="collection" value="${files.collection.name}"/>
@@ -94,9 +58,7 @@
     <!--                    -->
     <!-- Site               -->
     <!--                    -->
-
-
-    <bean id="event.prepareSites" class="org.alfresco.bm.dataload.PrepareSites" parent="event.base">
+    <bean id="event.prepareSites" class="org.alfresco.bm.dataload.sites.PrepareSites" parent="event.base">
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <property name="sitesCount" value="${load.sitesCount}"/>
@@ -105,14 +67,14 @@
         <property name="chart" value="false"/>
     </bean>
 
-    <bean id="event.createSites" class="org.alfresco.bm.dataload.CreateSites" parent="event.base">
+    <bean id="event.createSites" class="org.alfresco.bm.dataload.sites.CreateSites" parent="event.base">
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <property name="siteCreationDelay" value="${load.siteCreationDelay}"/>
         <property name="batchSize" value="${load.batch.size}"/>
         <property name="chart" value="false"/>
     </bean>
 
-    <bean id="event.createSite" class="org.alfresco.bm.dataload.CreateSite" parent="event.base">
+    <bean id="event.createSite" class="org.alfresco.bm.dataload.sites.CreateSite" parent="event.base">
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <constructor-arg name="fileFolderService" ref="fileFolderService"/>
         <property name="baseUrl" value="${alfresco.url}"/>
@@ -127,8 +89,7 @@
     <!--                    -->
     <!-- Site Membership    -->
     <!--                    -->
-
-    <bean id="event.prepareSiteMembers" class="org.alfresco.bm.dataload.PrepareSiteMembers" parent="event.base">
+    <bean id="event.prepareSiteMembers" class="org.alfresco.bm.dataload.sites.PrepareSiteMembers" parent="event.base">
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <property name="usersPerSite" value="${load.usersPerSite}"/>
@@ -139,14 +100,14 @@
           parent="producer.base">
         <constructor-arg name="newEventName" value="createSiteMembers"/>
     </bean>
-    <bean id="event.createSiteMembers" class="org.alfresco.bm.dataload.CreateSiteMembers" parent="event.base">
+    <bean id="event.createSiteMembers" class="org.alfresco.bm.dataload.sites.CreateSiteMembers" parent="event.base">
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <property name="memberCreationDelay" value="${load.siteMemberCreationDelay}"/>
         <property name="batchSize" value="${load.batch.size}"/>
         <property name="chart" value="false"/>
     </bean>
 
-    <bean id="event.createSiteMember" class="org.alfresco.bm.dataload.CreateSiteMember" parent="event.base">
+    <bean id="event.createSiteMember" class="org.alfresco.bm.dataload.sites.CreateSiteMember" parent="event.base">
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <property name="baseUrl" value="${alfresco.url}"/>
@@ -155,105 +116,14 @@
     <bean id="producer.siteMemberCreated" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
           parent="producer.base"/>
 
-    <!--                    -->
-    <!-- Smart Folders      -->
-    <!--
+    <!--                                  -->
+    <!-- Site Data  -> files and folders  -->
+    <!--                                  -->
     <bean id="producer.siteMembersCreated" class="org.alfresco.bm.driver.event.producer.RedirectEventProducer"
-          parent="producer.base">
-        <constructor-arg name="newEventName" value="prepareSmartFolders"/>
-    </bean>
-    <bean id="event.prepareSmartFolders" class="org.alfresco.bm.dataload.smf.eventprocessor.PrepareSmartFolders"
-          parent="event.base">
-        <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <constructor-arg name="smfEnabled" value="${smf.enabled}"/>
-        <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
-        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
-        <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
-        <constructor-arg name="username" value="${alfresco.adminUser}"/>
-        <constructor-arg name="password" value="${alfresco.adminPwd}"/>
-        <constructor-arg name="smfTemplatePath" value="${smf.template}"/>
-        <constructor-arg name="smfRatio" value="${smf.siteRatio}"/>
-        <constructor-arg name="createSmartFolderEvent" value="createSmartFolders"/>
-        <constructor-arg name="createdSmartFolderEvent" value="smartFoldersPrepared"/>
-        <constructor-arg name="eventNameSelf" value="prepareSmartFolders"/>
-    </bean>
-    <bean id="event.createSmartFolders" class="org.alfresco.bm.dataload.smf.eventprocessor.CreateSmartFolder" parent="event.base">
-        <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
-        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
-        <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
-        <constructor-arg name="username" value="${alfresco.adminUser}"/>
-        <constructor-arg name="password" value="${alfresco.adminPwd}"/>
-        <constructor-arg name="rootFolderName" value="${smf.siteRootSFName}"/>
-        <constructor-arg name="aspectName" value="${smf.aspectName}"/>
-        <constructor-arg name="propertyName" value="${smf.propertyName}"/>
-        <constructor-arg name="eventNameCreatedSmartFolder" value="createdSmartFolder"/>
-    </bean>
-    <bean id="producer.createdSmartFolder" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
-          parent="producer.base"/>
- -->
-    <!--                    -->
-    <!-- RM                 -->
-    <!--                    -->
-    <bean id="producer.smartFoldersPrepared" class="org.alfresco.bm.driver.event.producer.RedirectEventProducer"
-          parent="producer.base">
-        <constructor-arg name="newEventName" value="prepareRM"/>
-    </bean>
-    <bean id="event.prepareRM" class="org.alfresco.bm.dataload.rm.eventprocessor.PrepareRM" parent="event.base">
-        <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <constructor-arg name="enabled" value="${rm.enabled}"/>
-        <constructor-arg name="username" value="${rm.username}"/>
-        <constructor-arg name="password" value="${rm.password}"/>
-        <property name="chart" value="false"/>
-        <property name="eventNameRMPrepared" value="prepareRMRoles"/>
-    </bean>
-
-    <bean id="event.prepareRMRoles" class="org.alfresco.bm.dataload.rm.eventprocessor.PrepareRMRoles" parent="event.base">
-        <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <property name="chart" value="false"/>
-        <property name="userCount" value="${rm.userCount}"/>
-        <property name="assignmentDelay" value="${rm.assignmentDelay}"/>
-        <property name="eventNameRMAssignRole" value="assignRMRole"/>
-        <property name="eventNameRMRolesPrepared" value="rmRolesPrepared"/>
-    </bean>
-
-    <bean id="event.assignRMRole" class="org.alfresco.bm.dataload.rm.eventprocessor.AssignRMRole" parent="event.base">
-        <constructor-arg name="httpClientProvider" ref="httpClientProvider"/>
-        <constructor-arg name="authenticationDetailsProvider" ref="authenticationDetailsProvider"/>
-        <constructor-arg name="baseUrl" value="${alfresco.url}"/>
-        <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <property name="chart" value="false"/>
-        <property name="eventNameRMRoleAssigned" value="assignedRMRole"/>
-    </bean>
-
-    <bean id="producer.assignedRMRole" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
-          parent="producer.base"/>
-
-    <!-- Event raised by the "scheduleSiteLoaders" event processor; add files to RM -->
-    <bean id="event.rmFile" class="org.alfresco.bm.dataload.rm.eventprocessor.FileRMFile" parent="event.base">
-        <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
-        <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
-        <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
-        <constructor-arg name="username" value="${rm.username}"/>
-        <constructor-arg name="password" value="${rm.password}"/>
-        <property name="chart" value="true"/>
-        <property name="eventNameRmFileComplete" value="rmFileComplete"/>
-    </bean>
-    <bean id="producer.rmFileComplete" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
-          parent="producer.base"/>
-
-    <!--                    -->
-    <!-- Site Data          -->
-    <!--                    -->
-
-    <bean id="producer.rmRolesPrepared" class="org.alfresco.bm.driver.event.producer.RedirectEventProducer"
           parent="producer.base">
         <constructor-arg name="newEventName" value="scheduleSiteLoaders"/>
     </bean>
-    <bean id="event.scheduleSiteLoaders" class="org.alfresco.bm.dataload.ScheduleSiteLoaders" parent="event.base">
+    <bean id="event.scheduleSiteLoaders" class="org.alfresco.bm.dataload.files.ScheduleSiteLoaders" parent="event.base">
         <constructor-arg name="sessionService" ref="sessionService"/>
         <constructor-arg name="fileFolderService" ref="fileFolderService"/>
         <constructor-arg name="subfolders" value="${siteLoad.subfolders}"/>
@@ -261,77 +131,46 @@
         <constructor-arg name="filesPerFolder" value="${siteLoad.filesPerFolder}"/>
         <constructor-arg name="maxActiveLoaders" value="${siteLoad.maxActiveLoaders}"/>
         <constructor-arg name="loadCheckDelay" value="${siteLoad.loadCheckDelay}"/>
-        <constructor-arg name="spoofSiteFiles" value="${spoof.spoofSiteFiles}"/>
         <property name="chart" value="false"/>
         <property name="eventNameLoadSiteFolders" value="loadSiteFolders"/>
         <property name="eventNameLoadSiteFiles" value="loadSiteFiles"/>
-        <property name="eventNameSpoofSiteFiles" value="spoofSiteFiles"/>
         <property name="eventNameScheduleLoaders" value="scheduleSiteLoaders"/>
         <property name="eventNameLoadingComplete" value="loadingComplete"/>
     </bean>
     <bean id="producer.loadingComplete" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
           parent="producer.base"/>
 
-    <bean id="event.loadSiteFolders" class="org.alfresco.bm.dataload.SiteFolderLoader" parent="event.base">
+    <bean id="event.loadSiteFolders" class="org.alfresco.bm.dataload.files.SiteFolderLoader" parent="event.base">
         <constructor-arg name="fileFolderService" ref="fileFolderService"/>
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <constructor-arg name="testFileService" ref="testFileService"/>
-        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
-        <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
-        <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
-        <property name="rmEnabled" value="${rm.enabled}"/>
-        <property name="rmFileRatio" value="${rm.fileRatio}"/>
-        <property name="rmFileDelay" value="${rm.fileDelay}"/>
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="siteFoldersLoaded"/>
+        <property name="baseUrl" value="${alfresco.url}"/>
     </bean>
     <bean id="producer.siteFoldersLoaded" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
           parent="producer.base"/>
 
-    <bean id="event.loadSiteFiles" class="org.alfresco.bm.dataload.SiteFolderLoader" parent="event.base">
+    <bean id="event.loadSiteFiles" class="org.alfresco.bm.dataload.files.SiteFolderLoader" parent="event.base">
         <constructor-arg name="fileFolderService" ref="fileFolderService"/>
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
         <constructor-arg name="testFileService" ref="testFileService"/>
-        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
-        <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
-        <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
-        <property name="rmEnabled" value="${rm.enabled}"/>
-        <property name="rmFileRatio" value="${rm.fileRatio}"/>
-        <property name="rmFileDelay" value="${rm.fileDelay}"/>
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="cleanSiteFolder"/>
+        <property name="baseUrl" value="${alfresco.url}"/>
     </bean>
 
-    <bean id="event.spoofSiteFiles" class="org.alfresco.bm.dataload.SpoofFileLoader" parent="event.base">
-        <constructor-arg name="httpClientProvider" ref="httpClientProvider"/>
-        <constructor-arg name="authenticationDetailsProvider" ref="authenticationDetailsProvider"/>
-        <constructor-arg name="baseUrl" value="${alfresco.url}"/>
-        <constructor-arg name="fileFolderService" ref="fileFolderService"/>
-        <constructor-arg name="userDataService" ref="userDataService"/>
-        <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <constructor-arg name="filesPerTxn" value="${spoof.filesPerTxn}"/>
-        <constructor-arg name="minFileSize" value="${spoof.minFileSize}"/>
-        <constructor-arg name="maxFileSize" value="${spoof.maxFileSize}"/>
-        <constructor-arg name="forceBinaryStorage" value="${spoof.forceBinaryStorage}"/>
-        <constructor-arg name="descriptionCount" value="${spoof.descriptionCount}"/>
-        <constructor-arg name="descriptionSize" value="${spoof.descriptionSize}"/>
-        <property name="chart" value="true"/>
-        <property name="eventNameSiteFilesSpoofed" value="cleanSiteFolder"/>
-    </bean>
-
-    <bean id="event.cleanSiteFolder" class="org.alfresco.bm.dataload.CleanSiteFolder" parent="event.base">
+    <bean id="event.cleanSiteFolder" class="org.alfresco.bm.dataload.files.CleanSiteFolder" parent="event.base">
         <constructor-arg name="sessionService" ref="sessionService"/>
         <constructor-arg name="fileFolderService" ref="fileFolderService"/>
         <constructor-arg name="userDataService" ref="userDataService"/>
         <constructor-arg name="siteDataService" ref="siteDataService"/>
-        <constructor-arg name="cmisBindingType" value="${alfresco.cmisBindingType}"/>
-        <constructor-arg name="cmisBindingUrl" value="${alfresco.cmisBindingUrl}"/>
-        <constructor-arg name="cmisCtx" ref="cmis.opCtx"/>
         <constructor-arg name="deleteFolderPercentage" value="${siteLoad.deleteFolderPercentage}"/>
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderCleaned" value="siteFolderCleaned"/>
+        <property name="baseUrl" value="${alfresco.url}"/>
     </bean>
     <bean id="producer.siteFolderCleaned" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
           parent="producer.base"/>

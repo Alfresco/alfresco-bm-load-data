@@ -23,7 +23,7 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
-package org.alfresco.bm.dataload;
+package org.alfresco.bm.dataload.sites;
 
 import com.mongodb.DBObject;
 import org.alfresco.bm.AbstractRestApiEventProcessor;
@@ -36,6 +36,7 @@ import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataService;
 import org.alfresco.dataprep.SiteService;
 import org.alfresco.rest.model.RestErrorModel;
+import org.alfresco.rest.model.RestSiteContainerModelsCollection;
 import org.alfresco.rest.model.RestSiteModel;
 import org.alfresco.utility.model.SiteModel;
 import org.alfresco.utility.model.UserModel;
@@ -127,10 +128,26 @@ public class CreateSite extends AbstractRestApiEventProcessor
             siteDataService.setSiteMemberCreationState(siteId, siteManager, DataCreationState.Created);
 
             // Create a folder reference for the document library
-            FolderData docLib = new FolderData(guid,                                   // already unique
-                "", "/" + PATH_SNIPPET_SITES + "/" + siteId + "/" + PATH_SNIPPET_DOCLIB, 0L, 0L);
-            fileFolderService.createNewFolder(docLib);
-
+            RestSiteContainerModelsCollection siteContainers = getRestWrapper().authenticateUser(userModel).withCoreAPI().usingSite(createdSite)
+                .getSiteContainers();
+            //this should always succeed...
+            String statusCodeForGetDocLib = getRestWrapper().getStatusCode();
+            if (isOKStatus(statusCodeForGetDocLib) && hasValidDocLibNodeRef(siteContainers))
+            {
+                String docLibFolderNodeRef = siteContainers.getEntries().get(0).onModel().getId();
+                logger
+                    .debug(statusCodeForGetDocLib + " Successfully got " + PATH_SNIPPET_DOCLIB + " Folder id: " + docLibFolderNodeRef + " for site: " + siteId);
+                FolderData docLib = new FolderData(docLibFolderNodeRef,                                   // already unique
+                    "", "/" + PATH_SNIPPET_SITES + "/" + siteId + "/" + PATH_SNIPPET_DOCLIB, 0L, 0L);
+                fileFolderService.createNewFolder(docLib);
+            }
+            else
+            {
+                // but just in case it did not succeed (ACS may have run out of memory or something...)
+                logger.warn("Failed to get a valid nodeRef id for the " + PATH_SNIPPET_DOCLIB + " node of the newly created site: " + siteId + " . Status code "
+                    + statusCodeForGetDocLib);
+                // not sure how this will impact the rest of the logic in this BM driver as we needed that folder id to create file and folders in it later
+            }
             String msg = "Created site: " + createdSite.getId() + " guid: " + guid + " SiteManager: " + siteManager;
             event = new Event(eventNameSiteCreated, null);
 
@@ -155,6 +172,17 @@ public class CreateSite extends AbstractRestApiEventProcessor
                 "Could not create site:" + siteId + " . " + "Return code was: " + statusCode + " . " + "Last error message:" + System.lineSeparator()
                     + detailedError);
         }
+    }
+
+    private boolean isOKStatus(String statusCodeForGetDocLib)
+    {
+        return HttpStatus.OK.toString().equalsIgnoreCase(statusCodeForGetDocLib);
+    }
+
+    private boolean hasValidDocLibNodeRef(RestSiteContainerModelsCollection siteContainers)
+    {
+        return siteContainers != null && siteContainers.getEntries() != null && siteContainers.getEntries().size() > 0
+            && siteContainers.getEntries().get(0).onModel().getId() != null && !siteContainers.getEntries().get(0).onModel().getId().isEmpty();
     }
 
 }

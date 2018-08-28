@@ -33,9 +33,10 @@ import org.alfresco.bm.common.EventResult;
 import org.alfresco.bm.common.session.MongoSessionService;
 import org.alfresco.bm.common.util.junit.tools.MongoDBForTestsFactory;
 import org.alfresco.bm.data.DataCreationState;
-import org.alfresco.bm.dataload.rm.eventprocessor.PrepareRM;
-import org.alfresco.bm.dataload.rm.eventprocessor.PrepareRMRoles;
-import org.alfresco.bm.dataload.rm.eventprocessor.RMRole;
+import org.alfresco.bm.dataload.files.ScheduleSiteLoaders;
+import org.alfresco.bm.dataload.sites.CreateSite;
+import org.alfresco.bm.dataload.sites.PrepareSiteMembers;
+import org.alfresco.bm.dataload.sites.PrepareSites;
 import org.alfresco.bm.driver.event.Event;
 import org.alfresco.bm.site.SiteData;
 import org.alfresco.bm.site.SiteDataServiceImpl;
@@ -147,47 +148,6 @@ public class EventProcessorsTest
     }
 
     @Test
-    public void prepareRM() throws Exception
-    {
-        StopWatch stopWatch = new StopWatch();
-        PrepareRM processor = new PrepareRM(userDataService, siteDataService, true, "bob", "secret");
-        EventResult result = processor.processEvent(null, stopWatch);
-        assertEquals(1, result.getNextEvents().size());
-
-        // Check RM admin user
-        assertNotNull(userDataService.findUserByUsername("bob"));
-        assertEquals(DataCreationState.Created, userDataService.findUserByUsername("bob").getCreationState());
-        // Check RM site
-        assertNotNull(siteDataService.getSite(PrepareRM.RM_SITE_ID));
-        assertEquals(DataCreationState.Created, siteDataService.getSite(PrepareRM.RM_SITE_ID).getCreationState());
-        // Check RM admin member
-        assertNotNull(siteDataService.getSiteMember(PrepareRM.RM_SITE_ID, "bob"));
-        assertEquals(DataCreationState.Created, siteDataService.getSiteMember(PrepareRM.RM_SITE_ID, "bob").getCreationState());
-        assertEquals(RMRole.Administrator.toString(), siteDataService.getSiteMember(PrepareRM.RM_SITE_ID, "bob").getRole());
-    }
-
-    @Test
-    public void prepareRMRoles() throws Exception
-    {
-        // Should be no scheduled creations
-        assertEquals(0L, siteDataService.countSiteMembers(PrepareRM.RM_SITE_ID, null));
-
-        prepareRM();
-        StopWatch stopWatch = new StopWatch();
-        PrepareRMRoles processor = new PrepareRMRoles(userDataService, siteDataService);
-        EventResult result = processor.processEvent(null, stopWatch);
-
-        assertEquals("The RM role already existed, so there must be 50 events", PrepareRMRoles.DEFAULT_USER_COUNT, result.getNextEvents().size());
-        Event eventOne = result.getNextEvents().get(0);
-        Event eventTwo = result.getNextEvents().get(1);
-        assertEquals(PrepareRMRoles.DEFAULT_ASSIGNMENT_DELAY, eventTwo.getScheduledTime() - eventOne.getScheduledTime());
-
-        // All users should be scheduled for assignment
-        assertEquals("The RM admin would not need scheduling. ", PrepareRMRoles.DEFAULT_USER_COUNT - 1,
-            siteDataService.countSiteMembers(PrepareRM.RM_SITE_ID, DataCreationState.Scheduled));
-    }
-
-    @Test
     public void scheduleSiteLoaders() throws Exception
     {
         prepareSiteMembersWithSites();
@@ -200,7 +160,7 @@ public class EventProcessorsTest
         }
 
         StopWatch stopWatch = new StopWatch();
-        ScheduleSiteLoaders processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 100, 4, 100, true);
+        ScheduleSiteLoaders processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 100, 4, 100);
         EventResult result = processor.processEvent(null, stopWatch);
         assertEquals(5, result.getNextEvents().size());
         // A file loader for each folder
@@ -209,13 +169,13 @@ public class EventProcessorsTest
         assertEquals(Integer.valueOf(0), ((DBObject) result.getNextEvents().get(0).getData()).get(ScheduleSiteLoaders.FIELD_FOLDERS_TO_CREATE));
 
         stopWatch = new StopWatch();
-        processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 0, 4, 100, true);
+        processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 0, 4, 100);
         result = processor.processEvent(null, stopWatch);
         // All the sessions doing the loading are still active, so just reschedule
         assertEquals(1, result.getNextEvents().size());
 
         stopWatch = new StopWatch();
-        processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 0, 5, 100, true);
+        processor = new ScheduleSiteLoaders(sessionService, fileFolderService, 5, 3, 0, 5, 100);
         result = processor.processEvent(null, stopWatch);
         // One more loader is allowed, so we have a loader and a rescheduling
         assertEquals(2, result.getNextEvents().size());
