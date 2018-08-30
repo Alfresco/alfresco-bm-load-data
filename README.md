@@ -1,5 +1,7 @@
 ### Alfresco Benchmark Load Data
 
+Generic documentation for the benchmark drivers can be found [here](https://github.com/Alfresco/alfresco-bm-manager/tree/master/docs/bm-driver).
+
 ### Get the code
 
 Git:
@@ -21,6 +23,9 @@ Use the Benchmark Testing with Alfresco page for version compatibility.
     A compatible version of the Benchmark Server running on a Tomcat7 at port 9080;
     Alfresco with /alfresco available.
 ```
+
+### Release bm-load-data project
+Please use [this guide](https://github.com/Alfresco/alfresco-bm-manager/tree/master/docs/ReleaseProcess.md) for the release process.
 
 ### Contributing guide
 Please use [this guide](CONTRIBUTING.md) to make a contribution to the project.
