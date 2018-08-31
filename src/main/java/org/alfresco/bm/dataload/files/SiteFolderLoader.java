@@ -307,7 +307,7 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
         else
         {
             final String message =
-                "Could not create folder: " + newFileName + " in path: " + parentFolderPath + " , folder id: " + parentFolder.getNodeRef() + ". Message: "
+                "Could not create file: " + newFileName + " in path: " + parentFolderPath + " , parent folder id: " + parentFolder.getNodeRef() + ". Message: "
                     + getRestCallErrorMessage(restWrapper);
             throw new RuntimeException(message);
         }
