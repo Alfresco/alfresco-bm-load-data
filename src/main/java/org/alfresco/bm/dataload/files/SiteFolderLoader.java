@@ -285,11 +285,26 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
         }
     }
 
-    private void createFile(String newFileName, File fileToUpload, ContentModel parentFolder, String parentFolderPath, UserModel userModel) throws Exception
+    private void createFile(String newFileName, File fileToUpload, ContentModel parentFolder, String parentFolderPath, UserModel userModel)
+        throws Exception
     {
         RestWrapper restWrapper = getRestWrapper();
+
+        // There is no method in the restassured api for addMultiPart File and also specify a different file name.
+        // The name is taken out of the File.getName(). It is always assumed you want to add a file and keep the name of that file.
+        // In order to send the contents of the file, but specify a different name, we could use the method with the Stream overloaded parameter:
+        // addMultiPart("filedata", newFileName, new FileInputStream(fileToUpload));
+        // or the one with the byte array parameter, but that will be converted to stream as well
+        // The next line (createNode()) will throw an exception saying that the request is not repeatable(it is not,
+        // because the stream once closed can not be reused)
+        // Another option is to copy the file with the new name on the disk, for each request, and delete it at the end of this method,
+        // but that would mean a lot of IO on the OS running this driver - not really what we want
+        //
+        // The solution chosen is to hack it: use the FakeNameFile class that will return our custom name for the getName() method
+        // it seems to work fine.
+
         resumeTimer();
-        restWrapper.authenticateUser(userModel).configureRequestSpec().addMultiPart("filedata", fileToUpload);
+        restWrapper.authenticateUser(userModel).configureRequestSpec().addMultiPart("filedata", new FakeNameFile(newFileName, fileToUpload));
         RestNodeModel newFileNode = restWrapper.authenticateUser(userModel).withCoreAPI().usingResource(parentFolder).createNode();
         suspendTimer();
 
@@ -307,12 +322,11 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
         else
         {
             final String message =
-                "Could not create file: " + newFileName + " in path: " + parentFolderPath + " , parent folder id: " + parentFolder.getNodeRef() + ". Message: "
-                    + getRestCallErrorMessage(restWrapper);
+                "Could not create file: " + newFileName + " in path: " + parentFolderPath + " , parent folder id: " + parentFolder.getNodeRef()
+                    + ". Message: " + getRestCallErrorMessage(restWrapper);
             throw new RuntimeException(message);
         }
     }
-
 
     // TODO the following few methods should go in the super class
 
@@ -348,7 +362,6 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
             logger.debug("Created new folder: " + newFolderModel.getName() + " with ID: " + newFolderModel.getId());
         }
     }
-
 
     private void logFileConflict(String newFileName, String parentFolderPath)
     {
@@ -423,4 +436,24 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
         return user;
     }
 
+}
+
+/**
+ * Hack class to return whatever name we want for a file
+ */
+class FakeNameFile extends File
+{
+    private String fakeName;
+
+    FakeNameFile(String newFakeName, File theFileToFake)
+    {
+        super(theFileToFake.toURI());
+        this.fakeName = newFakeName;
+    }
+
+    @Override
+    public String getName()
+    {
+        return fakeName;
+    }
 }
