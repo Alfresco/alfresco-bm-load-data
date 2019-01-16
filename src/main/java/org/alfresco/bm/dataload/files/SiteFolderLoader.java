@@ -45,7 +45,10 @@ import org.alfresco.rest.core.RestWrapper;
 import org.alfresco.rest.model.RestErrorModel;
 import org.alfresco.rest.model.RestNodeBodyModel;
 import org.alfresco.rest.model.RestNodeModel;
+import org.alfresco.rest.model.RestRenditionInfoModel;
+import org.alfresco.rest.model.RestRenditionInfoModelCollection;
 import org.alfresco.utility.model.ContentModel;
+import org.alfresco.utility.model.FileModel;
 import org.alfresco.utility.model.UserModel;
 import org.apache.commons.logging.Log;
 import org.springframework.http.HttpStatus;
@@ -105,6 +108,9 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
     private final TestFileService testFileService;
 
     private String eventNameSiteFolderLoaded;
+
+    private boolean requestRenditions;
+    private String renditionList;
 
     /**
      * Constructor
@@ -285,6 +291,7 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
         }
     }
 
+
     private void createFile(String newFileName, File fileToUpload, ContentModel parentFolder, String parentFolderPath, UserModel userModel)
         throws Exception
     {
@@ -313,6 +320,10 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
         {
             fileFolderService.incrementFileCount("", parentFolderPath, 1);
             logFileCreated(newFileNode);
+            if (isRequestRenditions())
+            {
+                triggerRenditions(userModel, restWrapper, newFileNode);
+            }
         }
         else if (isStatusConflict(statusCode))
         {
@@ -326,6 +337,75 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
                     + ". Message: " + getRestCallErrorMessage(restWrapper);
             throw new RuntimeException(message);
         }
+    }
+
+    private void triggerRenditions(UserModel userModel, RestWrapper restWrapper, RestNodeModel newFileNode) throws Exception
+    {
+        final FileModel file = new FileModel();
+        file.setNodeRef(newFileNode.getId());
+
+        // Get supported renditions
+        logger.debug("Finding out all possible renditions for node: " + newFileNode.getId());
+        resumeTimer();
+        RestRenditionInfoModelCollection renditionsInfo = restWrapper.withCoreAPI().usingNode(file).getNodeRenditionsInfo();
+        suspendTimer();
+        for (RestRenditionInfoModel m : renditionsInfo.getEntries())
+        {
+            RestRenditionInfoModel renditionInfo = m.onModel();
+            String renditionId = renditionInfo.getId();
+            String targetMimeType = renditionInfo.getContent().getMimeType();
+            logger.debug("Supported rendition: " + renditionId + " target mime type: " + targetMimeType);
+
+            if (isRenditionTypeRequested(renditionId))
+            {
+                logger.debug("Requesting rendition: " + renditionId);
+                resumeTimer();
+                restWrapper.authenticateUser(userModel).withCoreAPI().usingNode(file).createNodeRendition(renditionId);
+                suspendTimer();
+
+                final String statusCodeRendition = restWrapper.getStatusCode();
+                logger.debug("Status code rendition: " + statusCodeRendition);
+            }
+            // It is not advised to call waitForRenditionToBeCreated(restWrapper, file, renditionId);
+            // because renditions may take some time to be created.
+        }
+    }
+
+    /**
+     * Careful with this method. Make sure you use it only if you understand the implications.
+     */
+    private void waitForRenditionToBeCreated(RestWrapper restWrapper, FileModel file, String renditionId) throws Exception
+    {
+        //if you want to change the default timeout modify this: Utility.retryCountSeconds = 30;
+        logger.debug("waiting for rendition to be created... ");
+        resumeTimer();
+        final RestRenditionInfoModel nodeRenditionUntilIsCreated = restWrapper.withCoreAPI().usingNode(file)
+            .getNodeRenditionUntilIsCreated(renditionId);
+        suspendTimer();
+        logger.debug("Rendition creation status: " + nodeRenditionUntilIsCreated.getStatus());
+    }
+
+    private boolean isRenditionTypeRequested(String renditionId)
+    {
+        if (renditionId==null || renditionId.isEmpty())
+        {
+            return false; // this is invalid
+        }
+        String renditionList = getRenditionList();
+        if (renditionList==null || renditionList.isEmpty())
+        {
+            //if the user had not specified any type of rendition, we will request rendition for all supported types
+            return true;
+        }
+        String[] types = renditionList.split(",");
+        for(String type: types)
+        {
+            if (renditionId.equals(type))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // TODO the following few methods should go in the super class
@@ -387,6 +467,26 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
     public void setEventNameSiteFolderLoaded(String eventNameSiteFolderLoaded)
     {
         this.eventNameSiteFolderLoaded = eventNameSiteFolderLoaded;
+    }
+
+    public boolean isRequestRenditions()
+    {
+        return requestRenditions;
+    }
+
+    public void setRequestRenditions(boolean requestRenditions)
+    {
+        this.requestRenditions = requestRenditions;
+    }
+
+    public String getRenditionList()
+    {
+        return renditionList;
+    }
+
+    public void setRenditionList(String renditionList)
+    {
+        this.renditionList = renditionList;
     }
 
     /**

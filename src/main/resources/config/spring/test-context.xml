@@ -148,6 +148,8 @@
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="siteFoldersLoaded"/>
         <property name="baseUrl" value="${alfresco.url}"/>
+        <property name="requestRenditions" value="${siteLoad.requestRenditions}"/>
+        <property name="renditionList" value="${siteLoad.renditionList}"/>
     </bean>
     <bean id="producer.siteFoldersLoaded" class="org.alfresco.bm.driver.event.producer.TerminateEventProducer"
           parent="producer.base"/>
@@ -160,6 +162,8 @@
         <property name="chart" value="true"/>
         <property name="eventNameSiteFolderLoaded" value="cleanSiteFolder"/>
         <property name="baseUrl" value="${alfresco.url}"/>
+        <property name="requestRenditions" value="${siteLoad.requestRenditions}"/>
+        <property name="renditionList" value="${siteLoad.renditionList}"/>
     </bean>
 
     <bean id="event.cleanSiteFolder" class="org.alfresco.bm.dataload.files.CleanSiteFolder" parent="event.base">
