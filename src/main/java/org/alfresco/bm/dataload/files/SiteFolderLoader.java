@@ -366,19 +366,23 @@ public class SiteFolderLoader extends AbstractRestApiEventProcessor
                 final String statusCodeRendition = restWrapper.getStatusCode();
                 logger.debug("Status code rendition: " + statusCodeRendition);
             }
-            // for some reason the system is not very happy to wait for doing these calls-
-            // there (may be) are timeouts on these events, and waiting a few seconds for the renditions responses may kill this event
-            if (false)
-            {
-                //Utility.retryCountSeconds = 30;
-                logger.debug("waiting for rendition to be created... ");
-                resumeTimer();
-                final RestRenditionInfoModel nodeRenditionUntilIsCreated = restWrapper.withCoreAPI().usingNode(file)
-                    .getNodeRenditionUntilIsCreated(renditionId);
-                suspendTimer();
-                logger.debug("Rendition creation status: " + nodeRenditionUntilIsCreated.getStatus());
-            }
+            // It is not advised to call waitForRenditionToBeCreated(restWrapper, file, renditionId);
+            // because renditions may take some time to be created.
         }
+    }
+
+    /**
+     * Careful with this method. Make sure you use it only if you understand the implications.
+     */
+    private void waitForRenditionToBeCreated(RestWrapper restWrapper, FileModel file, String renditionId) throws Exception
+    {
+        //if you want to change the default timeout modify this: Utility.retryCountSeconds = 30;
+        logger.debug("waiting for rendition to be created... ");
+        resumeTimer();
+        final RestRenditionInfoModel nodeRenditionUntilIsCreated = restWrapper.withCoreAPI().usingNode(file)
+            .getNodeRenditionUntilIsCreated(renditionId);
+        suspendTimer();
+        logger.debug("Rendition creation status: " + nodeRenditionUntilIsCreated.getStatus());
     }
 
     private boolean isRenditionTypeRequested(String renditionId)
